@@ -177,7 +177,7 @@ class BaseFeaturePreprocessing:
                     output_feature, hash_dependency_info, spare_feature_info
                 )
                 df = HashingClass(
-                    data_path=str(self.raw_data_dir.replace("processed", ""))
+                    data_path=str(self.raw_data_dir).replace("processed", "")
                 ).hashing_func(
                     df,
                     output_feature,
@@ -194,7 +194,7 @@ class BaseFeaturePreprocessing:
                     output_feature, hash_dependency_info, spare_feature_info
                 )
                 df = HashingClass(
-                    data_path=str(self.raw_data_dir.replace("processed", ""))
+                    data_path=str(self.raw_data_dir).replace("processed", "")
                 ).hashing_func(
                     df,
                     output_feature,
