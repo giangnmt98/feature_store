@@ -1,0 +1,7 @@
+raw_data_path: data/processed/
+feathr_workspace_folder: configs/feathr_config.yaml
+feature_registry_config_path: configs/feature_registry_config.yaml
+training_pipeline_config_path: configs/training_pipeline_config.yaml
+materialize_pipeline_config_path: configs/materialize_pipeline_config.yaml
+infer_pipeline_config_path: configs/infer_pipeline_config.yaml
+process_lib: pandas

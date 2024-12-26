@@ -1,0 +1,13 @@
+services:
+  redis:
+    image: redis:latest
+    container_name: redis_server
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "dsteammaidinh"]
+
+volumes:
+  redis_data:
+    driver: local

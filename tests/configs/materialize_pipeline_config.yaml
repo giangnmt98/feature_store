@@ -1,0 +1,26 @@
+feature_tables:
+  - feature_table_names: [user_features]
+    setting_name: user_feature_setting
+    key_names: [user_id]
+    feature_names:
+      - encoded_user_province
+      - encoded_age_group
+      - encoded_user_package_code
+      - hashed_user_id
+      - hashed_user_id_v2
+      - encoded_prefer_movie_type
+      - encoded_prefer_vod_type
+
+  - feature_table_names: [item_features]
+    setting_name: item_feature_setting
+    key_names: [item_id]
+    feature_names:
+      - hashed_item_id
+      - hashed_item_id_v2
+      - hashed_content_category
+      - encoded_content_country
+      - encoded_content_type
+      - encoded_content_parent_type
+
+spark_execution_config:
+  spark.jars.packages: com.redislabs:spark-redis_2.12:3.1.0,org.apache.hadoop:hadoop-mapreduce-client-core:3.3.2,org.apache.hadoop:hadoop-common:3.3.2

@@ -1,1 +1,1 @@
-# feature_store
+Setup Feathr

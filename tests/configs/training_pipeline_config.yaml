@@ -1,0 +1,58 @@
+raw_data_path: data/processed/preprocessed_features
+feature_queries:
+  - feature_names:
+      - user_age_group
+      - user_province
+      - user_package_code
+      - user_sex
+      - user_platform
+      - encoded_user_province
+      - encoded_age_group
+      - encoded_user_package_code
+      - ab_group_id
+      - is_infering_user
+      - user_weight
+      - batch_idx
+      - random_user_group
+      - hashed_user_id
+      - hashed_user_id_v2
+    key_names: [user_id]
+  - feature_names:
+      - clean_content_country
+      - encoded_content_country
+      - content_category
+      - clean_content_category
+      - hashed_content_category
+      - publish_month
+      - publish_week
+      - publish_year_biweekly
+      - hashed_publish_year_biweekly
+      - hashed_item_id
+      - hashed_item_id_v2
+      - movie_publish_month
+      - movie_publish_week
+      - encoded_content_type
+      - content_parent_type
+      - encoded_content_parent_type
+      - item_is_vod_content
+      - item_is_movie_content
+      - item_is_channel_content
+    key_names: [item_id]
+  - feature_names:
+      - popularity_item_group
+      - item_weight
+    key_names: [item_id]
+  - feature_names:
+      - prefer_movie_type
+      - prefer_vod_type
+      - encoded_prefer_movie_type
+      - encoded_prefer_vod_type
+    key_names: [user_id]
+  - feature_names:
+      - weighted_lr
+      - is_weekend
+    key_names: [user_id, item_id]
+
+spark_execution_config:
+  spark.feathr.inputFormat: parquet
+  spark.feathr.outputFormat: parquet
