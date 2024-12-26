@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "featurestore"
-version = "0.1"
+version = "v1.0"
 description = "IC recommendation feature store"
 readme = "README.md"
 license = { file = "LICENSE" }
