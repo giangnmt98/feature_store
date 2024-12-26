@@ -176,7 +176,9 @@ class BaseFeaturePreprocessing:
                 dependency_col, hash_bucket_size = self._get_hash_dependency_info(
                     output_feature, hash_dependency_info, spare_feature_info
                 )
-                df = HashingClass().hashing_func(
+                df = HashingClass(
+                    data_path=str(self.raw_data_dir.replace("processed", ""))
+                ).hashing_func(
                     df,
                     output_feature,
                     dependency_col,
@@ -191,7 +193,9 @@ class BaseFeaturePreprocessing:
                 dependency_col, hash_bucket_size = self._get_hash_dependency_info(
                     output_feature, hash_dependency_info, spare_feature_info
                 )
-                df = HashingClass().hashing_func(
+                df = HashingClass(
+                    data_path=str(self.raw_data_dir.replace("processed", ""))
+                ).hashing_func(
                     df,
                     output_feature,
                     dependency_col,

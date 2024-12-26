@@ -18,13 +18,13 @@ def md5_64bit_int_hash(input_string, version=1):
 
 
 class HashingClass(metaclass=SingletonMeta):
-    def __init__(self):
+    def __init__(self, data_path):
         self.rehash_user_id = np.load(
-            Path("data") / "rehash_user_id.npy",
+            Path(data_path) / "rehash_user_id.npy",
             allow_pickle=True,
         ).tolist()
         self.rehash_item_id = np.load(
-            Path("data") / "rehash_item_id.npy",
+            Path(data_path) / "rehash_item_id.npy",
             allow_pickle=True,
         ).tolist()
 

@@ -18,6 +18,7 @@ if __name__ == "__main__":
         "--config_path",
         type=str,
         nargs="?",
+        default="config.yaml",
         help="Path to the configuration file",
     )
     args = parser.parse_args()
