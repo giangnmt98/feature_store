@@ -52,18 +52,21 @@ class FeaturePipeline:
         FeatureRegistry(
             config_path=self.feature_registry_config_path,
             feathr_client=self.client,
+            raw_data_path=self.raw_data_path,
         ).run()
 
     def get_features_for_training_pipeline(self):
         TrainingPipeline(
             config_path=self.training_pipeline_config_path,
             feathr_client=self.client,
+            raw_data_path=self.raw_data_path,
         ).run()
 
     def materialize_online_features(self):
         MaterializePipeline(
             config_path=self.materialize_pipeline_config_path,
             feathr_client=self.client,
+            raw_data_path=self.raw_data_path,
         ).run()
 
     def materialize_offline_features(self):
@@ -71,6 +74,7 @@ class FeaturePipeline:
             config_path=self.materialize_pipeline_config_path,
             feathr_client=self.client,
             materialize_for_eval=True,
+            raw_data_path=self.raw_data_path,
         ).run()
 
     def get_features_for_infer_pipeline(self):

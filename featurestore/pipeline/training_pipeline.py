@@ -17,6 +17,7 @@ class TrainingPipeline:
         self,
         config_path,
         feathr_client,
+        raw_data_path: str,
         timestamp_column: str = TIMESTAMP_COLUMN,
         timestamp_format: str = TIMESTAMP_FORMAT,
     ):
@@ -24,7 +25,9 @@ class TrainingPipeline:
             config_path, TrainingPipelineConfig, parse_training_config
         )
         self.client = feathr_client
-        self.raw_data_path = Path(self.training_config.raw_data_path)
+        self.raw_data_path = Path(
+            raw_data_path + "/" + self.training_config.raw_data_path
+        )
         self.timestamp_column = timestamp_column
         self.timestamp_format = timestamp_format
         self.observation_source_path = (

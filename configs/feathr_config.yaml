@@ -14,7 +14,7 @@ spark_config:
 online_store:
   redis:
     # Redis configs to access Redis cluster
-    host: '0.0.0.0'
+    host: '127.0.0.1'
     port: 6379
     ssl_enabled: False
 

@@ -13,12 +13,13 @@ class FeatureRegistry:
         self,
         config_path: str,
         feathr_client,
+        raw_data_path: str,
     ):
         self.registry_config = return_or_load(
             config_path, FeatureRegistryConfig, parse_registry_config
         )
         self.client = feathr_client
-        self.raw_data_path = self.registry_config.raw_data_path
+        self.raw_data_path = raw_data_path + "/" + self.registry_config.raw_data_path
         self.feature_transform = FeatureTransform()
 
         self.user_batch_source = self._get_user_batch_source()

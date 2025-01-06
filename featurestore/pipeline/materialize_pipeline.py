@@ -14,6 +14,7 @@ class MaterializePipeline:
         self,
         config_path: str,
         feathr_client,
+        raw_data_path: str,
         materialize_for_eval: bool = False,
         num_date_eval=3,
     ):
@@ -21,6 +22,9 @@ class MaterializePipeline:
             config_path, MaterializePipelineConfig, parse_materialize_config
         )
         self.client = feathr_client
+        self.save_offline_materialized_path = (
+            raw_data_path + "/" + self.materialize_config.save_dir_path
+        )
         self.materialize_for_eval = materialize_for_eval
         infer_date = self.materialize_config.infer_date
         self.num_date_eval = num_date_eval
@@ -43,7 +47,7 @@ class MaterializePipeline:
         if self.materialize_for_eval:
             omit_date_list = get_omitted_date(
                 for_date=self.infer_date,
-                folder_path=self.materialize_config.save_dir_path
+                folder_path=self.save_offline_materialized_path
                 + f"/{table_name_list[0]}",
                 num_days_before=self.num_date_eval,
             )
@@ -60,7 +64,7 @@ class MaterializePipeline:
     def _get_sink_list(self, table_name_list):
         sink_list = []
         if self.materialize_for_eval:
-            dir_path = self.materialize_config.save_dir_path
+            dir_path = self.save_offline_materialized_path
             for table_name in table_name_list:
                 save_path = dir_path + f"/{table_name}"
                 hdfs_sink = HdfsSink(
