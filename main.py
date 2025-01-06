@@ -1,16 +1,9 @@
 import argparse
 
-import yaml
-
+from featurestore.base.utils.utils import load_simple_dict_config
 from featurestore.feature_pipeline import FeaturePipeline
 
 if __name__ == "__main__":
-
-    def load_simple_dict_config(path_config):
-        with open(path_config) as f:
-            config = yaml.safe_load(f)
-        return config
-
     parser = argparse.ArgumentParser(
         description="Process CSV data based on a given configuration."
     )

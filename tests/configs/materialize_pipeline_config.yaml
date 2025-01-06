@@ -22,5 +22,13 @@ feature_tables:
       - encoded_content_type
       - encoded_content_parent_type
 
-spark_execution_config:
+online_spark_execution_configs:
   spark.jars.packages: com.redislabs:spark-redis_2.12:3.1.0,org.apache.hadoop:hadoop-mapreduce-client-core:3.3.2,org.apache.hadoop:hadoop-common:3.3.2
+
+infer_date: "20230430"
+save_dir_path: "data/processed/preprocessed_features/materialized_offline_data"
+
+offline_spark_execution_configs:
+  spark.feathr.inputFormat: parquet
+  spark.feathr.outputFormat: parquet
+  spark.feathr.hdfs.local.enable: true

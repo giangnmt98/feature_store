@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -23,7 +23,10 @@ class TrainingPipelineConfig(BaseModel):
 
 class MaterializePipelineConfig(BaseModel):
     feature_tables: List[FeatureTableConfig]
-    spark_execution_config: Dict
+    online_spark_execution_configs: Optional[Dict] = None
+    offline_spark_execution_configs: Optional[Dict] = None
+    infer_date: str = "today"
+    save_dir_path: str = ""
 
 
 class InferPipelineConfig(BaseModel):

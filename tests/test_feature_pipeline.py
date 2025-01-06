@@ -16,6 +16,7 @@ class TestFeaturePipeline:
 
     def test_feature_pipeline_pyspark(self):
         self.clean_folder()
+        logger.info("PREPROCESS FEATURES")
         FeaturePipeline(
             raw_data_path="data/processed/",
             process_lib="pyspark",
@@ -39,9 +40,15 @@ class TestFeaturePipeline:
             user_id_df=user_item_df,
             process_lib="pyspark",
         )
+        logger.info("REGISTER FEATURES")
         pipeline.register_features()
+        logger.info("GET TRAINING FEATURES")
         pipeline.get_features_for_training_pipeline()
-        pipeline.materialize_features()
+        logger.info("MATERIALIZE OFFLINE FEATURES")
+        pipeline.materialize_offline_features()
+        logger.info("MATERIALIZE ONLINE FEATURES")
+        pipeline.materialize_online_features()
+        logger.info("GET INFERRING FEATURES")
         pipeline.get_features_for_infer_pipeline()
 
     def clean_folder(self):

@@ -1,4 +1,4 @@
-raw_data_path: data/processed/
+raw_data_path: /home/giang/Desktop/data/processed
 feathr_workspace_folder: configs/feathr_config.yaml
 feature_registry_config_path: configs/feature_registry_config.yaml
 training_pipeline_config_path: configs/training_pipeline_config.yaml

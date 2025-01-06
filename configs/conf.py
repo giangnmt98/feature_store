@@ -13,6 +13,8 @@ TIMESTAMP_COLUMN = "date_time"
 TIMESTAMP_FORMAT = "yyyy-MM-dd"
 ONLINE_INTERVAL = 90
 
+PANDAS_DATE_FORMAT = "%Y-%m-%d"
+
 
 class SpareFeatureInfo(metaclass=SingletonMeta):
     # encoded features with key is feature name and value is dict of encoded value

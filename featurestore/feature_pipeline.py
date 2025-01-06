@@ -60,10 +60,17 @@ class FeaturePipeline:
             feathr_client=self.client,
         ).run()
 
-    def materialize_features(self):
+    def materialize_online_features(self):
         MaterializePipeline(
             config_path=self.materialize_pipeline_config_path,
             feathr_client=self.client,
+        ).run()
+
+    def materialize_offline_features(self):
+        MaterializePipeline(
+            config_path=self.materialize_pipeline_config_path,
+            feathr_client=self.client,
+            materialize_for_eval=True,
         ).run()
 
     def get_features_for_infer_pipeline(self):
@@ -80,5 +87,9 @@ class FeaturePipeline:
         self.register_features()
         logger.info("GET TRAINING FEATURES")
         self.get_features_for_training_pipeline()
-        logger.info("MATERIALIZE FEATURES")
-        self.materialize_features()
+        logger.info("MATERIALIZE ONLINE FEATURES")
+        self.materialize_online_features()
+        logger.info("MATERIALIZE OFFLINE FEATURES")
+        self.materialize_offline_features()
+        # logger.info("GET INFERRING FEATURES")
+        # self.get_features_for_infer_pipeline()
