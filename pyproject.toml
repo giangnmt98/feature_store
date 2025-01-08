@@ -38,21 +38,6 @@ dev = [
     "pre-commit==3.3.2",
 ]
 
-[project.scripts]
-fetch-feathr-jars = """
-import subprocess
-import shutil
-import os
-url = 'https://github.com/giangnmt98/feathr_jars.git'
-repo_dir = 'feathr_jars'
-jar_name = 'vnpt_feathr-0.0.1.jar'
-
-subprocess.run(['git', 'clone', url], check=True)
-source_path = os.path.join(repo_dir, jar_name)
-dest_path = os.path.join(os.getcwd(), jar_name)
-shutil.move(source_path, dest_path)
-shutil.rmtree(repo_dir)
-"""
 test = [
     # Add the list from requirements.txt here
     "pytest==7.3.2",
