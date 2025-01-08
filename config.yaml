@@ -4,4 +4,5 @@ feature_registry_config_path: configs/feature_registry_config.yaml
 training_pipeline_config_path: configs/training_pipeline_config.yaml
 materialize_pipeline_config_path: configs/materialize_pipeline_config.yaml
 infer_pipeline_config_path: configs/infer_pipeline_config.yaml
+feathr_jar_path: /home/giang/Desktop/vnpt_feathr-0.0.1.jar
 process_lib: pandas
