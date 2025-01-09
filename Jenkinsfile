@@ -2,7 +2,6 @@ pipeline {
     agent any
     environment {
         CODE_DIRECTORY = 'featurestore'
-        SSH_KEY = credentials('feathr_deploy_key')
 
     }
     options {
@@ -50,28 +49,13 @@ pipeline {
             agent {
                 docker {
                     image 'test'
-                    args '--gpus all'
+                    args '-v /var/jenkins_home/.ssh:/home/dockeruser/.ssh--gpus all'
                 }
             }
             steps {
                 script {
                     // Set up Python environment
                     sh '''
-                    echo "=== Setting up Python environment ==="
-                    if [ -d /home/dockeruser/.ssh ]; then
-                        echo "Removing existing .ssh directory..."
-                        rm -rf /home/dockeruser/.ssh
-                    fi
-
-                    # Tạo thư mục .ssh thuộc về dockeruser
-                    mkdir -p /home/dockeruser/.ssh
-                    chmod 700 /home/dockeruser/.ssh
-
-                    # Thêm host vào file known_hosts
-                    ssh-keyscan -H github-test-feathr-deploy >> /home/dockeruser/.ssh/known_hosts
-                    chmod 600 /home/dockeruser/.ssh/known_hosts
-                    # Sử dụng SSH key ed25519 để cài đặt package từ private Git repository
-                    GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes" \
                     python3 -m pip install --cache-dir /opt/conda/pkgs -e .[dev]
                     '''
 
