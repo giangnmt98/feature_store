@@ -56,6 +56,7 @@ pipeline {
                 script {
                     // Set up Python environment
                     sh '''
+                    ls -la /home/dockeruser/.ssh
                     ssh -T git@github-test-feathr-deploy
                     python3 -m pip install --cache-dir /opt/conda/pkgs -e .[dev]
                     '''
