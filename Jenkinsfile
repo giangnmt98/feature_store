@@ -50,7 +50,7 @@ pipeline {
             agent {
                 docker {
                     image 'test'
-                    args '--gpus all'
+                    args '--gpus all -v ~/.ssh:/root/.ssh'
                 }
             }
             steps {
@@ -58,11 +58,6 @@ pipeline {
                     // Set up Python environment
                     sh '''
                     echo "=== Setting up Python environment ==="
-
-                    # Thiết lập SSH Key (ed25519)
-                    mkdir -p ~/.ssh
-                    echo "$SSH_KEY" > ~/.ssh/id_ed25519
-                    chmod 600 ~/.ssh/id_ed25519
 
                     # Thêm Host Git vào known_hosts
                     ssh-keyscan -H github-test-feathr-deploy >> ~/.ssh/known_hosts
