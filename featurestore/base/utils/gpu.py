@@ -10,7 +10,6 @@ import os
 
 import GPUtil
 import torch
-import cupy
 
 from featurestore.base.utils.logger import logger
 from featurestore.base.utils.singleton import SingletonMeta
@@ -51,7 +50,7 @@ class GpuLoading(metaclass=SingletonMeta):
         """
         # pylint: disable=C0415
         if self.is_gpu_available():
-
+            import cupy
 
             cupy.cuda.Device(int(self.get_gpu_device_id())).use()
             torch.cuda.set_device(int(self.get_gpu_device_id()))
