@@ -1,3 +1,11 @@
+"""
+Module: materialize_pipeline
+
+This module provides the `MaterializePipeline` class, which is responsible for the
+materialization of features from a feature store into online or offline storage.
+The pipeline leverages configurations and feature store clients to streamline
+materialization processes, supporting both evaluation and production modes.
+"""
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -10,6 +18,23 @@ from featurestore.base.utils.utils import get_omitted_date, return_or_load
 
 
 class MaterializePipeline:
+    """
+    MaterializePipeline is responsible for materializing features to online or offline
+    storage based on the provided configurations.
+
+    Attributes:
+        materialize_config (MaterializePipelineConfig): Parsed configuration object
+        client: Feathr client for interacting with the feature store.
+        save_offline_materialized_path (str): Path to store materialized features in
+            offline mode.
+        materialize_for_eval (bool): If True, runs the pipeline in evaluation mode
+            and materializes features to offline sinks.
+        infer_date (datetime): Date used for feature materialization, parsed from the
+            configuration.
+        execution_configurations (dict): Spark execution configurations for online
+            or offline materialization.
+    """
+
     def __init__(
         self,
         config_path: str,
@@ -43,6 +68,22 @@ class MaterializePipeline:
             )
 
     def _get_backfill_config(self, table_name_list):
+        """
+        Configures the backfill time range for processing features in evaluation mode.
+
+        This method identifies the necessary backfill dates by checking omitted dates
+        in existing offline materialized data. The backfill configuration defines
+        a time range and step for materializing features.
+
+        Args:
+            table_name_list (list): List of table names to which backfill
+            configuration is applied.
+
+        Returns:
+            BackfillTime or None: A BackfillTime object specifying the start,
+            end, and step for backfill processing if backfill is required.
+            Returns None if no backfill is needed.
+        """
         backfill_time = None
         if self.materialize_for_eval:
             omit_date_list = get_omitted_date(
@@ -62,6 +103,20 @@ class MaterializePipeline:
         return backfill_time
 
     def _get_sink_list(self, table_name_list):
+        """
+        Prepares a list of output sinks for materialized features based on the
+        pipeline's mode.
+
+        In evaluation mode (offline), features are saved to an HDFS-compatible path.
+        In production mode (online), features are stored in Redis.
+
+        Args:
+            table_name_list (list): List of table names to use when setting up
+            output sinks.
+
+        Returns:
+            list: A list of sink objects configured for the given table names.
+        """
         sink_list = []
         if self.materialize_for_eval:
             dir_path = self.save_offline_materialized_path
@@ -78,6 +133,15 @@ class MaterializePipeline:
         return sink_list
 
     def _materialize_features(self, table_name_list, setting_name, feature_names):
+        """
+        Materializes features from the feature store for the given feature tables.
+
+        Args:
+            table_name_list (list): List of table names for which features need to be
+            materialized.
+            setting_name (str): A unique name to apply to the materialization setting.
+            feature_names (list): List of feature names to materialize.
+        """
         backfill_time = self._get_backfill_config(table_name_list)
         sink_list = self._get_sink_list(table_name_list)
         settings = MaterializationSettings(
@@ -93,7 +157,11 @@ class MaterializePipeline:
         )
         self.client.wait_job_to_finish(timeout_sec=300)
 
-    def _materialize_all_table(self):
+    def materialize_all_table(self):
+        """
+        Iterates through all feature tables defined in the configuration
+        and materializes their features.
+        """
         for table in self.materialize_config.feature_tables:
             self._materialize_features(
                 table_name_list=table.feature_table_names,
@@ -102,4 +170,7 @@ class MaterializePipeline:
             )
 
     def run(self):
-        self._materialize_all_table()
+        """
+        Executes the entire materialization pipeline.
+        """
+        self.materialize_all_table()

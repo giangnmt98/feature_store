@@ -1,3 +1,10 @@
+"""
+Module: daily_data_utils
+
+This module provides utility functions for handling daily date-related operations,
+such as retrieving dates relative to a given date. It is designed to assist with
+date manipulations based on a predefined date format.
+"""
 import datetime
 
 import pandas as pd

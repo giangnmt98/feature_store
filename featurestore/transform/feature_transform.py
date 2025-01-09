@@ -1,3 +1,12 @@
+"""
+Module: feature_transform
+
+This module defines the `FeatureTransform` class and utility functions to generate and
+manage features for data pipelines. It supports the definition of Anchored and Derived
+features, along with transformations to enhance feature representation through encoding,
+hashing, and custom logic. These features can be used for various machine learning
+tasks, such as training and inference.
+"""
 from feathr import (
     BOOLEAN,
     FLOAT,
@@ -23,7 +32,21 @@ from featurestore.transform.key_definition import KeyDefinition
 
 
 class FeatureTransform:
+    """
+    FeatureTransform handles the creation of Anchored and Derived features.
+
+    This class defines transformations and logic for generating features,
+    grouping them as Anchored Features (directly linked to data sources)
+    or Derived Features (created using transformations of other features).
+
+    Attributes:
+        key_collection (dict): Collection of key mappings used for feature definitions
+        user_id (str): Identifier for user-related features.
+        item_id (str): Identifier for item-related features.
+    """
+
     def __init__(self):
+        # pylint: disable=R0915
         self.key_collection = KeyDefinition().key_collection
         self.user_id = self.key_collection["user_id"]
         self.item_id = self.key_collection["item_id"]
@@ -384,6 +407,22 @@ class FeatureTransform:
 
 
 def encoded_func_string(dictionary, col, default_value):
+    """
+    Generates a conditional transformation string for encoding feature columns.
+
+    This function creates an encoded feature transformation by iterating over
+    a dictionary of key-value pairs. The transformation applies conditional logic
+    to map raw column values to predefined encodings.
+
+    Args:
+        dictionary (dict): A mapping of column values to their corresponding
+        encoded values.
+        col (str): The column name to be encoded.
+        default_value (Any): The default value to apply if no condition matches.
+
+    Returns:
+        str: A string representation of an encoded feature transformation.
+    """
     cond = ""
     for key, value in dictionary.items():
         cond += f"if(boolean({col}='{key}'), {value}, "
@@ -392,6 +431,19 @@ def encoded_func_string(dictionary, col, default_value):
 
 
 def hashed_func_string(col, bucket_size):
+    """
+    Creates a hashing transformation function to bucketize column values.
+
+    The generated transformation hashes the input column, converts the hashed value
+    to a numeric format, and distributes it into a specified number of buckets.
+
+    Args:
+        col (str): The column name to be hashed.
+        bucket_size (int): The number of output buckets (hashing range).
+
+    Returns:
+        str: A string representation of a hashing transformation.
+    """
     func_string = (
         f"cast("
         f"conv("

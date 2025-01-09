@@ -1,3 +1,11 @@
+"""
+Module: training_pipeline
+
+This module provides the `TrainingPipeline` class, which is responsible for generating
+training datasets by querying and materializing offline features from a feature store.
+It prepares the data in a format ready for model training, utilizing configurations
+to streamline the feature retrieval process.
+"""
 from pathlib import Path
 from typing import List
 
@@ -13,6 +21,24 @@ from featurestore.transform.key_definition import KeyDefinition
 
 
 class TrainingPipeline:
+    """
+    TrainingPipeline is responsible for producing training datasets by querying
+    and materializing offline features based on configurations, and preparing
+    them for model training.
+
+    Attributes:
+        training_config (TrainingPipelineConfig): Parsed configuration object
+        client: Feathr client for interacting with the feature store.
+        raw_data_path (Path): Path to the base raw data directory.
+        timestamp_column (str): Column name for event timestamps in the observation data
+        timestamp_format (str): Format of the timestamp used in the observation data.
+        observation_source_path (Path): Path to the observation source data.
+        output_path (Path): Path where the resulting offline features are saved.
+        key_collection (dict): Collection of key definitions for query construction.
+        feature_query (List[str]): List of feature queries used to retrieve
+        offline features.
+    """
+
     def __init__(
         self,
         config_path,
@@ -39,7 +65,14 @@ class TrainingPipeline:
         self.key_collection = KeyDefinition().key_collection
         self.feature_query: List[str] = []
 
-    def _query_feature(self):
+    def query_feature(self):
+        """
+        Prepares feature queries for offline feature retrieval.
+
+        For each feature query specified in the configuration, this method constructs a
+        `FeatureQuery` object using the feature names and the corresponding key
+        definitions
+        """
         for feature_query in self.training_config.feature_queries:
             query = FeatureQuery(
                 feature_list=feature_query.feature_names,
@@ -48,6 +81,17 @@ class TrainingPipeline:
             self.feature_query.append(query)
 
     def _get_offline_features(self):
+        """
+        Retrieves offline features from observation data and saves the results
+        to an output file.
+
+        This method uses the Feathr client to retrieve the desired features based on
+        the prepared `feature_query` list. The observation data and retrieval
+        configurations are used to save the results in a specified output path.
+
+        Returns:
+            None: The results are saved to the `output_path` defined in the pipeline.
+        """
         settings = ObservationSettings(
             observation_path=str(self.observation_source_path),
             event_timestamp_column=self.timestamp_column,
@@ -62,10 +106,22 @@ class TrainingPipeline:
         self.client.wait_job_to_finish(timeout_sec=100000)
 
     def _get_result_df(self):
+        """
+        Loads the resulting offline feature dataset into a pandas DataFrame.
+
+        This method reads the saved output dataset of the offline features
+        from the output path and returns it as a pandas DataFrame.
+
+        Returns:
+            pandas.DataFrame: The dataset containing the retrieved offline features.
+        """
         result_df = get_result_df(self.client, res_url=str(self.output_path))
         return result_df
 
     def run(self):
-        self._query_feature()
+        """
+        Executes the entire training pipeline workflow.
+        """
+        self.query_feature()
         self._get_offline_features()
         # self._get_result_df()

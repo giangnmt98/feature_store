@@ -1,3 +1,10 @@
+"""
+Module: spark
+
+This module provides utility classes and methods for managing PySpark operations,
+offering functionality to initialize, configure, and manage Spark sessions.
+It also supports efficient resource handling and temporary data cleanup.
+"""
 import atexit
 import os
 import random
@@ -14,6 +21,18 @@ from featurestore.base.utils.singleton import SingletonMeta
 
 
 class AtomicCounter:
+    """
+    A thread-safe atomic counter.
+
+    The `AtomicCounter` class provides a counter that can be safely incremented
+    by multiple threads in a concurrent environment. It ensures atomicity
+    using a threading lock, preventing race conditions during updates.
+
+    Attributes:
+        value (int): The current value of the counter, initialized to the specified
+        value or 0 by default.
+    """
+
     def __init__(self, initial=0):
         """Initialize a new atomic counter to given initial value (default 0)."""
         self.value = initial
@@ -117,6 +136,9 @@ class SparkOperations(metaclass=SingletonMeta):
         return spark
 
     def clean_tmp_data(self):
+        """
+        Cleans temporary checkpoint data to release disk space.
+        """
         if Path(self.checkpoint_dir).exists():
             logger.opt(depth=-1).info(
                 "pyspark: cleaning all checkpoints to release disk cache"

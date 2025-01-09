@@ -17,6 +17,27 @@ PANDAS_DATE_FORMAT = "%Y-%m-%d"
 
 
 class SpareFeatureInfo(metaclass=SingletonMeta):
+    """
+    A singleton class managing sparse feature encodings and hash configurations.
+
+    This class defines and stores mappings for encoded and hashed sparse features, making it
+    easier to process categorical data and configure hashing for feature engineering in large-scale
+    systems. It supports efficient handling of feature indexing and hashing bucket sizes.
+
+    Attributes:
+        encoded_features (Dict[str, Dict[str, int]]): A dictionary mapping feature names to
+            sub-dictionaries, where each sub-dictionary maps raw feature values to their
+            corresponding encoded integer values.
+        hashed_features (Dict[str, int]): A dictionary mapping hashed feature names (e.g.,
+            user_id, item_id) to their predefined bucket sizes, used for hashing large feature spaces.
+        num_user_to_bucket_size (Dict[int, int]): A dictionary mapping the number of users
+            in the dataset to appropriate hash bucket sizes for user-related hashed features.
+
+    Usage:
+        Use this class in pipelines where sparse feature encoding and hashing are required
+        for categorical or high-cardinality features. The singleton pattern ensures a single
+        source of truth for feature configurations across the system.
+    """
     # encoded features with key is feature name and value is dict of encoded value
     # feature_name: {encoded_value: index}
     encoded_features: Dict[str, Dict] = {
@@ -239,6 +260,26 @@ class SpareFeatureInfo(metaclass=SingletonMeta):
 
 
 class DhashSpareFeatureInfo(SpareFeatureInfo):
+    """
+    An extended version of `SpareFeatureInfo` for managing double hashing configurations.
+
+    This class inherits from `SpareFeatureInfo` and provides additional support for double
+    hashing (dhash) features. It defines bucket sizes specific to dhash functionality and
+    extends the hashing configurations for user and item features, accommodating higher
+    scalability requirements.
+
+    Attributes:
+        num_user_to_dhash_bucket_size (Dict[int, int]): A mapping of the number of users
+            in the dataset to suitable hash bucket sizes for double hashing (dhash) features.
+        hashed_features (Dict[str, int]): A dictionary mapping dhash feature names
+            (e.g., hashed_user_id_v2, hashed_item_id_v2) to their respective bucket sizes,
+            as well as hashed features from the base class.
+
+    Usage:
+        This class is tailored for scenarios where double hashing is needed, such as feature
+        engineering in very large-scale systems. It ensures consistent hashing configurations
+        for both primary and double-hash feature representations.
+    """
     num_user_to_dhash_bucket_size = {
         10000: 10007,
         100000: 100003,
@@ -315,3 +356,140 @@ NUMBER_OF_RANDOM_USER_GROUP = 10
 INFERRING_USER_WEIGHT = 1
 POSITIVE_WEIGH_FOR_POPULARITY_GROUP = [1, 1, 1.5, 2, 3]
 DURATION_THRESHOLD_FOR_WEIGHTED_LR = 3600
+
+clean_content_country_mapping = {
+    # viet_nam
+    "vietnam": "viet_nam",
+    "việt_nam": "viet_nam",
+    "1": "viet_nam",
+    "vn": "viet_nam",
+    # my
+    "mỹ": "my",
+    "america": "my",
+    "6": "my",
+    "6,7": "my",
+    "6,8": "my",
+    "6,7,11": "my",
+    "6,7,20": "my",
+    "6,11": "my",
+    "6,7,8": "my",
+    "11,6": "my",
+    "europe_american": "my",
+    # trung_quoc
+    "china_mainland": "trung_quoc",
+    "3": "trung_quoc",
+    "china": "trung_quoc",
+    # hong_kong
+    "trung_quoc_hong_kong": "hong_kong",
+    "hongkong_china": "hong_kong",
+    "12": "hong_kong",
+    # dai_loan
+    "trung_quoc_dai_loan": "dai_loan",
+    "dai_loan_trung_quoc": "dai_loan",
+    "taiwan_china": "dai_loan",
+    "13": "dai_loan",
+    "dai_loan_(trung_quoc)": "dai_loan",
+    # nhat_ban
+    "japan": "nhat_ban",
+    "14": "nhat_ban",
+    "nhat_-_han": "nhat_ban",
+    # han_quoc
+    "korea": "han_quoc",
+    "35": "han_quoc",
+    "15": "han_quoc",
+    # anh
+    "british": "anh",
+    "7": "anh",
+    # phap
+    "france": "phap",
+    # duc
+    "8": "duc",
+    "11": "duc",
+    "germany": "duc",
+    # nga
+    "russia": "nga",
+    "10": "nga",
+    # y
+    "italia": "y",
+    "italy": "y",
+    # an_do
+    "india": "an_do",
+    "16": "an_do",
+    # canada
+    "23": "canada",
+    # dan_mach
+    "19": "dan_mach",
+    # philippines
+    "philippin": "philippines",
+    # most contents are in america
+    "17": "my",
+    # empty country
+    "": "empty",
+    # israel
+    "isarel": "israel",
+    # other
+    "khac": "other",
+    "nuoc_khac": "other",
+}
+nhat_ban_rulebase = [
+    "6#52740",
+    "6#33346",
+    "6#25451",
+    "6#25445",
+    "6#25418",
+    "3#25418",
+    "3#52740",
+    "3#33346",
+    "6#59571",
+    "2#125213",
+    "6#52541",
+    "3#52541",
+    "3#59571",
+]
+han_quoc_rulebase = [
+    "6#31759",
+    "6#31745",
+    "6#27593",
+    "6#31781",
+    "6#31771",
+    "2#138664",
+]
+tay_ban_nha_rulebase = [
+    "6#25444",
+    "3#25444",
+    "20#139384",
+    "20#130479",
+    "20#136589",
+    "20#130297",
+    "2#6417",
+]
+phap_rulebase = ["2#138544", "2#138543", "2#138002", "2#138161"]
+trung_quoc_rulebase = [
+    "2#139154",
+    "2#139153",
+    "2#139155",
+    "2#139156",
+    "2#123813",
+    "2#123808",
+]
+
+valid_package_code = {
+    "MYTV006": "Goi nang cao",
+    "MYTV021": "Goi nang cao moi",
+    "MYTV008": "Goi Vip",
+    "MYTV010": "B2B Chuan",
+    "MYTV014": "B2B Gold",
+    "MYTV015": "B2B Premium",
+    "MYTV013": "B2B Standard",
+    "MYTV016": "B2B Diamond",
+    "MYTV012": "B2B Vip",
+    "FLX001": "mytv flexi",
+    "FLX003": "Smart Flexi",
+    "VASC006": "Mytv silver hd",
+    "VASC005": "Mytv silver",
+    "VASC007": "Mytv Gold",
+    "VASC011": "Goi chuan",  # Galaxy thu 7
+    "VASC000": "mytv basic",  # Galaxy thu 7
+    "MYTV020": "Goi chuan moi",  # Galaxy thu 7
+    "MYTV019": "Goi Co ban moi",  # Galaxy thu 7
+}

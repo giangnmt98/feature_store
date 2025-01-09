@@ -1,3 +1,11 @@
+"""
+Module: singleton
+
+This module provides a metaclass implementation for the Singleton design pattern,
+ensuring that only one instance of a class exists throughout the lifetime of an
+application. It is particularly useful for scenarios where a single point of access
+to shared resources or configurations is required.
+"""
 from typing import Dict
 
 

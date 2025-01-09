@@ -1,15 +1,37 @@
+"""
+Module: gpu
+
+This module provides a singleton-based utility for managing GPU resources and
+dynamically selecting the appropriate computation libraries based on the availability
+of GPU hardware. It enables seamless integration of GPU-accelerated libraries with
+fallback to CPU-based libraries when GPUs are not available.
+"""
 import os
 
 import GPUtil
-import numpy as np
-import pandas as pd
 import torch
+import cupy
 
 from featurestore.base.utils.logger import logger
 from featurestore.base.utils.singleton import SingletonMeta
 
 
 class GpuLoading(metaclass=SingletonMeta):
+    """
+    GPU resource management class.
+
+    Attributes:
+        __device_id (int): The ID of the GPU device to use.
+        __is_gpu_available (bool): Whether GPU resources are available.
+        __df_backbone: The data handling library to use (cuDF or Pandas).
+        __scipy_backbone: The scientific computation library to use (cuSciPy or SciPy).
+        __np_backbone: The array computation library to use (CuPy or NumPy).
+
+    Args:
+        max_memory (float): Maximum memory utilization of a GPU for it to be
+            considered available.
+    """
+
     def __init__(self, max_memory=0.8):
         self.__device_id = self.__get_gpu_id(max_memory)
         self.__is_gpu_available = self.__device_id > -1
@@ -17,15 +39,19 @@ class GpuLoading(metaclass=SingletonMeta):
             f"__is_gpu_available={self.__is_gpu_available},"
             f"detect device id  = {self.__device_id}"
         )
-        self.__df_backbone = self.__get_pd_or_cudf()
-        self.__scipy_backbone = self.__get_scipy_or_cuscipy()
-        self.__np_backbone = self.__get_np_or_cupy()
-        # self.__vector_search_backbone = self.__get_vector_search()
         self.set_gpu_use()
 
     def set_gpu_use(self):
+        """
+        Configures the application to use a specified GPU device if available.
+
+        This method checks for GPU availability and sets the GPU device for computation
+        using libraries like CuPy and PyTorch. It ensures that the assigned device is
+        used for all GPU-dependent operations and logs the selected device ID.
+        """
+        # pylint: disable=C0415
         if self.is_gpu_available():
-            import cupy
+
 
             cupy.cuda.Device(int(self.get_gpu_device_id())).use()
             torch.cuda.set_device(int(self.get_gpu_device_id()))
@@ -36,70 +62,31 @@ class GpuLoading(metaclass=SingletonMeta):
         available = -1
         if os.getenv("CUDA_VISIBLE_DEVICES") == "":
             return available
-        for GPU in GPUtil.getGPUs():
-            if GPU.memoryUtil > max_memory:
+        for gpu in GPUtil.getGPUs():
+            if gpu.memoryUtil > max_memory:
                 continue
-            if GPU.memoryFree >= memory_free:
-                available = GPU.id
+            if gpu.memoryFree >= memory_free:
+                available = gpu.id
                 # memory_free = GPU.memoryFree
-                # todo fix issue
-                # issue ilegial memory access if cudf on device !=0
-                # currently, I don't know the reason, lets check later
-                # break to auto select device 0
                 break
         return available
 
     def is_gpu_available(
         self,
     ):
+        """
+        Checks if a GPU is available.
+
+        Returns:
+            bool: True if a GPU is available, otherwise False.
+        """
         return self.__is_gpu_available
 
     def get_gpu_device_id(self):
+        """
+        Gets the GPU device ID.
+
+        Returns:
+            int or None: The GPU device ID if a GPU is available; otherwise, None.
+        """
         return self.__device_id
-
-    def __get_pd_or_cudf(self):
-        """
-        Get pandas or cudf depending on the environment
-        """
-        if self.is_gpu_available():
-            try:
-                import cudf
-
-                return cudf
-            except ImportError:
-                logger.warning("cudf is not installed. Using pandas instead.")
-                return pd
-        else:
-            return pd
-
-    def __get_np_or_cupy(self):
-        """
-        Get numpy or cupy depending on the environment
-        """
-        if self.is_gpu_available():
-            try:
-                import cupy
-
-                return cupy
-            except ImportError:
-                logger.warning("cupy is not installed. Using numpy instead.")
-                return np
-        else:
-            return np
-
-    def __get_scipy_or_cuscipy(self):
-        """
-        Get scipy or cupyx depending on the environment
-        """
-        import scipy
-
-        if self.is_gpu_available():
-            try:
-                import cupyx.scipy
-
-                return cupyx.scipy
-            except ImportError:
-                logger.warning("cupyx is not installed. Using scipy instead.")
-                return scipy
-        else:
-            return scipy

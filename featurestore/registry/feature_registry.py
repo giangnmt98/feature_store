@@ -1,3 +1,12 @@
+"""
+Module: feature_registry
+
+This module defines the `FeatureRegistry` class, which is responsible for managing and
+registering features into a feature store. It processes feature definitions, groups them
+into anchors, creates derived features, and facilitates building or registering these
+features into the store.
+"""
+
 from feathr import INPUT_CONTEXT, FeatureAnchor
 
 from featurestore.base.schemas.registry_config import FeatureRegistryConfig
@@ -9,6 +18,27 @@ from featurestore.transform.source_definition import SourceDefinition
 
 
 class FeatureRegistry:
+    """
+    FeatureRegistry is responsible for managing and registering features in the
+    feature store.
+
+    This registry processes feature definitions, groups them into anchors,
+    creates derived features, and builds or registers them into the feature store.
+
+    Attributes:
+        registry_config (FeatureRegistryConfig): Parsed configuration object containing
+        details about the registry.
+        client: Feathr client for interacting with the feature store.
+        raw_data_path (str): Path to the raw data directory for defining batch sources.
+        feature_transform (FeatureTransform): Contains the transformation logic for
+        feature creation.
+        user_batch_source, content_info_batch_source, ab_user_batch_source,
+        online_user_batch_source, online_item_batch_source: Batch sources for different
+        categories of features.
+        anchored_feature_list (list): List of feature anchors.
+        derived_feature_list (list): List of derived features.
+    """
+
     def __init__(
         self,
         config_path: str,
@@ -32,21 +62,61 @@ class FeatureRegistry:
         self.derived_feature_list = self._create_derived_feature_list()
 
     def _get_user_batch_source(self):
+        """
+        Retrieves the batch source for user features.
+
+        Returns:
+            SourceDefinition: The batch source object for user features.
+        """
         return SourceDefinition(self.raw_data_path).user_batch_source
 
     def _get_content_batch_source(self):
+        """
+        Retrieves the batch source for content features.
+
+        Returns:
+            SourceDefinition: The batch source object for content features.
+        """
         return SourceDefinition(self.raw_data_path).content_info_batch_source
 
     def _get_ab_user_batch_source(self):
+        """
+        Retrieves the batch source for AB testing user features.
+
+        Returns:
+            SourceDefinition: The batch source object for AB testing user features.
+        """
         return SourceDefinition(self.raw_data_path).ab_user_batch_source
 
     def _get_online_item_batch_source(self):
+        """
+        Retrieves the batch source for online item features.
+
+        Returns:
+            SourceDefinition: The batch source object for online item features.
+        """
         return SourceDefinition(self.raw_data_path).online_item_batch_source
 
     def _get_online_user_batch_source(self):
+        """
+        Retrieves the batch source for online user features.
+
+        Returns:
+            SourceDefinition: The batch source object for online user features.
+        """
         return SourceDefinition(self.raw_data_path).online_user_batch_source
 
     def _create_anchored_feature_list(self):
+        """
+        Creates a list of feature anchors that group data sources with
+        their corresponding features.
+
+        Feature anchors map batch sources to specific feature lists.
+
+        Returns:
+            list: A list of `FeatureAnchor` objects representing anchored
+            feature groups.
+        """
         user_features = [
             self.feature_transform.f_age_group,
             self.feature_transform.f_province,
@@ -138,6 +208,15 @@ class FeatureRegistry:
         ]
 
     def _create_derived_feature_list(self):
+        """
+        Creates a list of derived features based on transformations of existing features
+
+        Derived features are defined using transformation logic provided by
+        `FeatureTransform`.
+
+        Returns:
+            list: A list of derived feature definitions.
+        """
         return [
             self.feature_transform.f_movie_publish_month,
             self.feature_transform.f_movie_publish_week,
@@ -156,18 +235,31 @@ class FeatureRegistry:
             self.feature_transform.f_encode_prefer_vod_type,
         ]
 
-    def _build_features(self):
+    def build_features(self):
+        """
+        Builds features in the feature store by processing feature anchors and
+        derived features.
+
+        This method uses the Feathr client to process the `anchored_feature_list` and
+        `derived_feature_list` and prepare them for usage in the feature store.
+        """
         self.client.build_features(
             anchor_list=self.anchored_feature_list,
             derived_feature_list=self.derived_feature_list,
         )
 
-    def _register_features(self):
+    def register_features(self):
+        """
+        Registers features into the feature store.
+        """
         try:
             self.client.register_features()
         except Exception as e:
             logger.warning(e)
 
     def run(self):
-        self._build_features()
-        # self._register_features()
+        """
+        Executes the primary workflow of the FeatureRegistry.
+        """
+        self.build_features()
+        # self.register_features()

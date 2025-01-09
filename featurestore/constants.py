@@ -1,3 +1,10 @@
+"""
+Module: constants
+
+This module defines constants used throughout the codebase, including data type
+configurations and standard data names. These constants help maintain consistency and
+reduce hardcoded values across modules.
+"""
 import numpy as np
 
 dtype = np.dtype
