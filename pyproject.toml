@@ -37,6 +37,8 @@ dev = [
     "types-PyYAML==6.0.12.10",
     "pre-commit==3.3.2",
     "pylint==3.2.7",
+    "pytest==7.3.2"
+
 ]
 
 test = [
