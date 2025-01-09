@@ -49,7 +49,7 @@ pipeline {
             agent {
                 docker {
                     image 'test'
-                    args '-v /var/jenkins_home/.ssh:/home/dockeruser/.ssh--gpus all'
+                    args '-v /var/jenkins_home/.ssh:/home/dockeruser/.ssh --gpus all'
                 }
             }
             steps {
