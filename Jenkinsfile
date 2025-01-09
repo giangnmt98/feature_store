@@ -2,6 +2,8 @@ pipeline {
     agent any
     environment {
         CODE_DIRECTORY = 'featurestore'
+        SSH_KEY = credentials('feathr_deploy_key')
+
     }
     options {
         timestamps()
@@ -56,8 +58,23 @@ pipeline {
                     // Set up Python environment once
                     sh '''
                     echo "=== Setting up Python environment ==="
+
+                    # Thiết lập SSH Key (ed25519)
+                    mkdir -p ~/.ssh
+                    echo "$SSH_KEY" > ~/.ssh/id_ed25519
+                    chmod 600 ~/.ssh/id_ed25519
+
+                    # Thêm Host Git vào known_hosts
+                    ssh-keyscan -H github-test-feathr-deploy >> ~/.ssh/known_hosts
+
+                    # Sử dụng SSH key ed25519 để cài đặt package từ private Git repository
+                    GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes" \
                     python3 -m pip install --cache-dir /opt/conda/pkgs -e .[dev]
                     '''
+                }
+            }
+            steps {
+                script {
                     // Run linting
                     sh '''
                     echo "=== Running Linting Tools ==="

@@ -25,7 +25,7 @@ dependencies = [
 "scipy==1.13.1",
 "flask-session==0.5.0",
 "plotly==5.18.0",
-"feathr @ git+ssh://git@github.com/giangnmt98/feathr_deploy.git#subdirectory=feathr_project"]
+"feathr @ git+ssh://git@github-test-feathr-deploy/giangnmt98/feathr_deploy.git#subdirectory=feathr_project"]
 
 [project.optional-dependencies]
 dev = [
