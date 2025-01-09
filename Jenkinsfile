@@ -58,7 +58,10 @@ pipeline {
                     // Set up Python environment
                     sh '''
                     echo "=== Setting up Python environment ==="
-                    ls /home/dockeruser/.ssh
+                    whoami
+                    echo $HOME
+                    ls -la /home/ || true
+                    ls -la /home/dockeruser/ || true
                     # Thêm Host Git vào known_hosts
                     ssh-keyscan -H github-test-feathr-deploy >> /home/dockeruser/.ssh/known_hosts
 
