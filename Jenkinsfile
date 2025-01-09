@@ -55,7 +55,7 @@ pipeline {
             }
             steps {
                 script {
-                    // Set up Python environment once
+                    // Set up Python environment
                     sh '''
                     echo "=== Setting up Python environment ==="
 
@@ -71,20 +71,18 @@ pipeline {
                     GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes" \
                     python3 -m pip install --cache-dir /opt/conda/pkgs -e .[dev]
                     '''
-                }
-            }
-            steps {
-                script {
+
                     // Run linting
                     sh '''
                     echo "=== Running Linting Tools ==="
                     flake8 $CODE_DIRECTORY
                     mypy --show-traceback $CODE_DIRECTORY
                     '''
+
                     // Run tests
                     sh '''
-                     echo "=== Running Tests ==="
-                     python3 -m pytest -s --durations=0 --disable-warnings tests/
+                    echo "=== Running Tests ==="
+                    python3 -m pytest -s --durations=0 --disable-warnings tests/
                     '''
                 }
             }
