@@ -64,9 +64,6 @@ pipeline {
 
                     # Thêm Host Git vào known_hosts
                     ssh-keyscan -H github-test-feathr-deploy >> /home/dockeruser/.ssh/known_hosts
-                    chmod 600 /home/dockeruser/.ssh/known_hosts
-                    # Thêm Host Git vào known_hosts
-                    ssh-keyscan -H github-test-feathr-deploy >> ~/.ssh/known_hosts
 
                     # Sử dụng SSH key ed25519 để cài đặt package từ private Git repository
                     GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes" \
