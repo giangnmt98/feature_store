@@ -59,11 +59,7 @@ pipeline {
                     sh '''
                     echo "=== Setting up Python environment ==="
 
-                    # Thêm Host Git vào known_hosts
-                    ssh-keyscan -H github-test-feathr-deploy >> ~/.ssh/known_hosts
-
                     # Sử dụng SSH key ed25519 để cài đặt package từ private Git repository
-                    GIT_SSH_COMMAND="ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes" \
                     python3 -m pip install --cache-dir /opt/conda/pkgs -e .[dev]
                     '''
 
