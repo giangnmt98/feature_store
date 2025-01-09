@@ -58,8 +58,6 @@ pipeline {
                     // Set up Python environment
                     sh '''
                     echo "=== Setting up Python environment ==="
-                    # Tạo thư mục nếu chưa tồn tại
-                    mkdir -p /home/dockeruser/.ssh
 
                     # Thêm Host Git vào known_hosts
                     ssh-keyscan -H github-test-feathr-deploy >> /home/dockeruser/.ssh/known_hosts
