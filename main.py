@@ -44,3 +44,7 @@ if __name__ == "__main__":
         infer_pipeline_config_path=config["infer_pipeline_config_path"],
         process_lib=config["process_lib"],
     ).run_all()
+    print("\n")
+    print("="*50)
+    print("Kill spark process")
+    os.system("pkill -f spark")
