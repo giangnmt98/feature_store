@@ -60,8 +60,8 @@ pipeline {
                     echo "=== Setting up Python environment ==="
                     whoami
                     echo $HOME
-                    ls -la /home/ || true
-                    ls -la /home/dockeruser/ || true
+                    sudo chown -R dockeruser:giang /home/dockeruser/.ssh
+                    sudo chmod 700 /home/dockeruser/.ssh
                     # Thêm Host Git vào known_hosts
                     ssh-keyscan -H github-test-feathr-deploy >> /home/dockeruser/.ssh/known_hosts
 
