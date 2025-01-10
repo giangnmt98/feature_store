@@ -48,7 +48,7 @@ pipeline {
         stage('Setup and Run Pipeline') {
             agent {
                 docker {
-                    image 'test'
+                    image 'abc'
                     args '-v /home/giang/.ssh:/home/dockeruser/.ssh --gpus all'
                 }
             }
