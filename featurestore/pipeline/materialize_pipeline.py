@@ -6,9 +6,12 @@ materialization of features from a feature store into online or offline storage.
 The pipeline leverages configurations and feature store clients to streamline
 materialization processes, supporting both evaluation and production modes.
 """
+import shutil
 from datetime import datetime, timedelta
+from glob import glob
 
 import pandas as pd
+from distutils.dir_util import copy_tree
 from feathr import BackfillTime, HdfsSink, MaterializationSettings, RedisSink
 
 from configs.conf import FILENAME_DATE_FORMAT
@@ -40,6 +43,7 @@ class MaterializePipeline:
         config_path: str,
         feathr_client,
         raw_data_path: str,
+        infer_date: str,
         materialize_for_eval: bool = False,
         num_date_eval=3,
     ):
@@ -50,8 +54,8 @@ class MaterializePipeline:
         self.save_offline_materialized_path = (
             raw_data_path + "/" + self.materialize_config.save_dir_path
         )
+        self.temp_save_path = self.save_offline_materialized_path + "/temp"
         self.materialize_for_eval = materialize_for_eval
-        infer_date = self.materialize_config.infer_date
         self.num_date_eval = num_date_eval
         if infer_date == "today":
             self.infer_date = datetime.today()
@@ -119,11 +123,11 @@ class MaterializePipeline:
         """
         sink_list = []
         if self.materialize_for_eval:
-            dir_path = self.save_offline_materialized_path
             for table_name in table_name_list:
-                save_path = dir_path + f"/{table_name}"
+                save_path = self.temp_save_path + f"/{table_name}"
                 hdfs_sink = HdfsSink(
                     output_path=save_path,
+                    # store_name="df",
                 )
                 sink_list.append(hdfs_sink)
         else:
@@ -168,6 +172,33 @@ class MaterializePipeline:
                 setting_name=table.setting_name,
                 feature_names=table.feature_names,
             )
+        if self.materialize_for_eval:
+            self._postprocesss_save_folder()
+
+    def _postprocesss_save_folder(self):
+        all_table_name = []
+        for table in self.materialize_config.feature_tables:
+            all_table_name.extend(table.feature_table_names)
+
+        for table_name in all_table_name:
+            subfolder_list = glob(
+                self.temp_save_path + f"/{table_name}/df*/daily/*/*/*"
+            )
+            existed_subfolder_list = glob(
+                self.save_offline_materialized_path + f"/{table_name}/*"
+            )
+            existed_date_list = [i.split("/")[-1] for i in existed_subfolder_list]
+            # copy subdirectory
+            for folder_path in subfolder_list:
+                new_date_path = folder_path.split("daily/")[-1].replace("/", "")
+                if new_date_path not in existed_date_list:
+                    new_folder_path = (
+                        self.save_offline_materialized_path
+                        + f"/{table_name}/{new_date_path}"
+                    )
+                    copy_tree(folder_path, new_folder_path)
+        # delete temp folder
+        shutil.rmtree(self.temp_save_path)
 
     def run(self):
         """

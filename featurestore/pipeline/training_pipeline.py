@@ -6,17 +6,22 @@ training datasets by querying and materializing offline features from a feature 
 It prepares the data in a format ready for model training, utilizing configurations
 to streamline the feature retrieval process.
 """
+import shutil
+from glob import glob
 from pathlib import Path
 from typing import List
 
 from feathr import FeatureQuery, ObservationSettings
 from feathr.utils.job_utils import get_result_df
 
+import configs.conf
 from configs.conf import TIMESTAMP_COLUMN, TIMESTAMP_FORMAT
 from featurestore.base.schemas.pipeline_config import TrainingPipelineConfig
 from featurestore.base.utils.config import parse_training_config
+from featurestore.base.utils.spark import SparkOperations
 from featurestore.base.utils.utils import return_or_load
 from featurestore.constants import DataName
+from featurestore.daily_data_utils import get_date_before
 from featurestore.transform.key_definition import KeyDefinition
 
 
@@ -44,6 +49,7 @@ class TrainingPipeline:
         config_path,
         feathr_client,
         raw_data_path: str,
+        infer_date,
         timestamp_column: str = TIMESTAMP_COLUMN,
         timestamp_format: str = TIMESTAMP_FORMAT,
     ):
@@ -56,14 +62,47 @@ class TrainingPipeline:
         )
         self.timestamp_column = timestamp_column
         self.timestamp_format = timestamp_format
-        self.observation_source_path = (
-            self.raw_data_path / f"{DataName.OBSERVATION_FEATURES}.parquet"
-        )
-        self.output_path = (
-            self.raw_data_path / "features" / f"{DataName.OFFLINE_FEATURES}.parquet"
-        )
+        self.for_date = infer_date
+
+        self.is_init_df = self._check_output_data_path()
+
+        if self.is_init_df:
+            self.observation_source_path = (
+                self.raw_data_path / f"{DataName.OBSERVATION_FEATURES}.parquet"
+            )
+            self.output_path = (
+                self.raw_data_path
+                / "features"
+                / f"init_{DataName.OFFLINE_FEATURES}.parquet"
+            )
+        else:
+            self.for_date = get_date_before(int(self.for_date), num_days_before=1)
+            self.observation_source_path = (
+                self.raw_data_path
+                / f"{DataName.OBSERVATION_FEATURES}.parquet"
+                / f"{configs.conf.FILENAME_DATE_COL}={self.for_date}"
+            )
+            self.output_path = (
+                self.raw_data_path
+                / "features"
+                / f"{DataName.OFFLINE_FEATURES}.parquet"
+                / f"{configs.conf.FILENAME_DATE_COL}={self.for_date}"
+            )
+
         self.key_collection = KeyDefinition().key_collection
         self.feature_query: List[str] = []
+
+    def _check_output_data_path(self):
+        save_output_path = (
+            self.raw_data_path / "features" / f"{DataName.OFFLINE_FEATURES}.parquet"
+        )
+        if save_output_path.exists():
+            subfolder_list = glob(
+                str(save_output_path) + f"/{configs.conf.FILENAME_DATE_COL}=*"
+            )
+            if len(subfolder_list) > 0:
+                return False
+        return True
 
     def query_feature(self):
         """
@@ -118,6 +157,31 @@ class TrainingPipeline:
         result_df = get_result_df(self.client, res_url=str(self.output_path))
         return result_df
 
+    def _repartition_offline_df(self, delete_init_data=False):
+        """
+        Repartition the initialized offline feature dataframe and save to a new path.
+        Only use when process offline feature for the first time (is_init_df=True)
+        """
+        new_output_path = (
+            self.raw_data_path / "features" / f"{DataName.OFFLINE_FEATURES}.parquet"
+        )
+        # df = self._get_result_df()
+        spark = SparkOperations().get_spark_session()
+        df = spark.read.option("header", True).parquet(str(self.output_path))
+        df.write.option("header", True).partitionBy(
+            configs.conf.FILENAME_DATE_COL
+        ).mode("overwrite").parquet(str(new_output_path))
+        if delete_init_data:
+            self._delete_init_offline_folder()
+
+    def _delete_init_offline_folder(self):
+        """
+        Delete initialized offline feature dataframe.
+        Only use when process offline feature for the first time (is_init_df=True)
+        """
+        if self.output_path.exists():
+            shutil.rmtree(self.output_path)
+
     def run(self):
         """
         Executes the entire training pipeline workflow.
@@ -125,3 +189,5 @@ class TrainingPipeline:
         self.query_feature()
         self._get_offline_features()
         # self._get_result_df()
+        if self.is_init_df:
+            self._repartition_offline_df()

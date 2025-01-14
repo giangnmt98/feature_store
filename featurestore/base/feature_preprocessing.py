@@ -5,12 +5,6 @@ This module defines the foundational classes and methods required for
 feature preprocessing in both batch and online processing contexts.
 It includes logic for loading raw data, applying feature transformations,
 generating unique keys, and saving preprocessed data.
-
-Classes:
-    - BaseFeaturePreprocessing: A base class for managing common preprocessing
-      tasks such as loading data, creating unique keys, and saving results.
-    - BaseOnlineFeaturePreprocessing: An extension of the base class tailored for
-      online feature preprocessing, handling real-time data processing and updates.
 """
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -24,6 +18,7 @@ from configs import conf
 from featurestore.base.utils.fileops import load_parquet_data, save_parquet_data
 from featurestore.base.utils.logger import logger
 from featurestore.base.utils.spark import SparkOperations
+from featurestore.base.utils.utils import get_full_date_list
 from featurestore.constants import DataName
 from featurestore.hashing_function import HashingClass
 
@@ -319,6 +314,7 @@ class BaseDailyFeaturePreprocessing(BaseFeaturePreprocessing):
         self,
         data_name: str,
         with_columns: Optional[List[str]] = None,
+        dates_to_extract: Optional[List] = None,
         filters: Optional[List] = None,
         schema: Optional[Any] = None,
     ) -> pd.DataFrame:
@@ -335,12 +331,12 @@ class BaseDailyFeaturePreprocessing(BaseFeaturePreprocessing):
             pd.DataFrame: The loaded raw dataset ready for processing.
         """
         assert (
-            self.dates_to_extract is None or len(self.dates_to_extract) > 0
+            dates_to_extract is None or len(dates_to_extract) > 0
         ), "dates_to_extract must be not empty"
         data_path = self.raw_data_dir / f"{data_name}.parquet"
         date_filters = (
-            [(self.filename_date_col, "in", self.dates_to_extract)]
-            if self.dates_to_extract
+            [(self.filename_date_col, "in", dates_to_extract)]
+            if dates_to_extract
             else None
         )
         if filters:
@@ -437,16 +433,6 @@ class BaseOnlineFeaturePreprocessing(BaseDailyFeaturePreprocessing):
         save_filename="",
         data_name_to_get_new_dates=DataName.MOVIE_HISTORY,
     ):
-        self.columns_to_init = [
-            "content_id",
-            "content_type",
-            "username",
-            "profile_id",
-            "duration",
-            "date_time",
-            "filename_date",
-            "part",
-        ]
         super().__init__(
             process_lib,
             raw_data_path,
@@ -454,14 +440,29 @@ class BaseOnlineFeaturePreprocessing(BaseDailyFeaturePreprocessing):
             data_name_to_get_new_dates,
         )
 
+    def _get_full_date_to_extract(self):
+        full_date_list = []
+        for d in self.dates_to_extract:
+            d = pd.to_datetime(d, format=conf.FILENAME_DATE_FORMAT)
+            date_list = get_full_date_list(
+                for_date=d, num_days_before=conf.ROLLING_PERIOD_FOR_POPULARITY_ITEM
+            )
+            full_date_list += date_list
+
+        full_dates_to_extract = list(set(full_date_list))
+        return full_dates_to_extract
+
     def read_processed_data(self):
+        full_dates_to_extract = self._get_full_date_to_extract()
         movie_df = self._load_raw_data(
             data_name=DataName.MOVIE_HISTORY,
-            with_columns=self.columns_to_init,
+            with_columns=conf.SELECTED_HISTORY_COLUMNS,
+            dates_to_extract=full_dates_to_extract,
         )
         vod_df = self._load_raw_data(
             data_name=DataName.VOD_HISTORY,
-            with_columns=self.columns_to_init,
+            with_columns=conf.SELECTED_HISTORY_COLUMNS,
+            dates_to_extract=full_dates_to_extract,
         )
         self.raw_data[DataName.MOVIE_HISTORY] = movie_df
         self.raw_data[DataName.VOD_HISTORY] = vod_df
@@ -478,7 +479,6 @@ class BaseOnlineFeaturePreprocessing(BaseDailyFeaturePreprocessing):
             df = self.raw_data[DataName.MOVIE_HISTORY].union(
                 self.raw_data[DataName.VOD_HISTORY]
             )
-
         df = self.create_user_key(df)
         df = self.create_item_key(df)
         return df

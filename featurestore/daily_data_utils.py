@@ -16,7 +16,8 @@ def get_date_before(
     for_date: int,
     num_days_before: int,
 ) -> int:
-    """Get date before for_date.
+    """
+    Get date before for_date.
 
     Args:
         for_date: The date to get date before.

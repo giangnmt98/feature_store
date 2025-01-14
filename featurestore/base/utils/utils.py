@@ -16,23 +16,7 @@ import pyspark.sql.functions as F
 import yaml
 
 from configs.conf import FILENAME_DATE_COL, FILENAME_DATE_FORMAT, PANDAS_DATE_FORMAT
-
-
-def get_date_before(
-    for_date: int,
-    num_days_before: int,
-) -> int:
-    """Get date before for_date.
-
-    Args:
-        for_date: The date to get date before.
-        num_days_before: The number of days before for_date.
-    """
-    date_before = pd.to_datetime(for_date, format=FILENAME_DATE_FORMAT) - timedelta(
-        days=num_days_before
-    )
-    date_before = int(date_before.strftime(FILENAME_DATE_FORMAT))
-    return date_before
+from featurestore.daily_data_utils import get_date_before
 
 
 def split_batches(x: typing.Any, batch_size: int) -> typing.List[typing.Any]:
@@ -237,11 +221,8 @@ def get_folder_date_list(folder_path):
         list: A list of dates as strings, extracted from the folder names matching
             the search pattern.
     """
-    subfolder_list = glob(str(folder_path) + "*/df*/daily/*/*/*")
-    folder_date_list = [
-        folder_name.split("daily/")[-1].replace("/", "")
-        for folder_name in subfolder_list
-    ]
+    subfolder_list = glob(str(folder_path) + "/*")
+    folder_date_list = [folder_name.split("/")[-1] for folder_name in subfolder_list]
     return folder_date_list
 
 

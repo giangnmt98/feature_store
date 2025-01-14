@@ -14,7 +14,6 @@ from pathlib import Path
 
 from pyspark.sql import SparkSession
 
-from featurestore.base.utils.gpu import GpuLoading
 from featurestore.base.utils.logger import logger
 from featurestore.base.utils.resource import ResourceInfo
 from featurestore.base.utils.singleton import SingletonMeta
@@ -55,12 +54,7 @@ class SparkOperations(metaclass=SingletonMeta):
     def __init__(self, config_spark=None):
         self.atom = AtomicCounter()
         if config_spark is None:
-            gpu_loading = GpuLoading()
-            gpu_loading.set_gpu_use()
-            if gpu_loading.is_gpu_available():
-                cpu_factor = 0.8
-            else:
-                cpu_factor = 0.5
+            cpu_factor = 0.5
             app_name = "spark-application"
             resource_info = ResourceInfo()
             num_cores = max(int((resource_info.num_cores - 1) * cpu_factor), 1)

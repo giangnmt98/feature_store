@@ -70,14 +70,12 @@ class MaterializePipelineConfig(BaseModel):
             for online storage.
         offline_spark_execution_configs (Optional[Dict]): Spark execution configurations
             for offline storage.
-        infer_date (str): The date to infer during the materialization process.
         save_dir_path (str): The directory path to save materialized features.
     """
 
     feature_tables: List[FeatureTableConfig]
     online_spark_execution_configs: Optional[Dict] = None
     offline_spark_execution_configs: Optional[Dict] = None
-    infer_date: str = "today"
     save_dir_path: str = ""
 
 

@@ -17,7 +17,6 @@ import pyarrow.parquet as pq
 import pyspark.sql.functions as F
 from pyspark.sql import DataFrame
 
-from featurestore.base.utils.logger import logger
 from featurestore.base.utils.spark import SparkOperations
 
 
@@ -112,7 +111,7 @@ def load_parquet_data(
     schema: Optional[Any] = None,
 ):
     """
-    Loads Parquet data using the specified library (pandas, PySpark, or cuDF).
+    Loads Parquet data using the specified library (pandas, PySpark).
 
     Args:
         file_paths (Union[Path, str, List[Path], List[str]]): A single file path or
@@ -167,19 +166,6 @@ def load_parquet_data(
                 if np_type is not None:
                     df[col] = df[col].astype(np_type)
         return df
-
-    if process_lib == "cudf":
-        import cudf
-
-        pdf = load_parquet_data(
-            file_paths=file_paths,
-            with_columns=with_columns,
-            process_lib="pandas",
-            filters=filters,
-            spark=spark,
-            schema=schema,
-        )
-        return cudf.from_pandas(pdf)
 
     return load_parquet_data_by_pyspark(
         file_paths=file_paths,
@@ -331,14 +317,6 @@ def save_parquet_data(
             existing_data_behavior=existing_data_behavior,
             schema=schema,
         )
-    elif process_lib == "cudf":
-        save_parquet_data_by_cudf(
-            df,
-            save_path=save_path,
-            partition_cols=partition_cols,
-            overwrite=overwrite,
-            schema=schema,
-        )
     else:
         save_parquet_data_by_pyspark(
             df,
@@ -386,33 +364,6 @@ def save_parquet_data_by_pandas(
         existing_data_behavior=existing_data_behavior,
         partition_cols=partition_cols,
     )
-
-
-def save_parquet_data_by_cudf(
-    df,
-    save_path: Union[Path, str],
-    partition_cols: Optional[List[str]] = None,
-    overwrite: bool = True,
-    schema: Optional[Any] = None,
-):
-    """
-    Saves a cudf DataFrame as a Parquet dataset.
-
-    Args:
-        df (pandas.DataFrame): The DataFrame to save.
-        save_path (Union[Path, str]): The destination path to save the Parquet dataset.
-        partition_cols (Optional[List[str]]): A list of column names to partition the
-            dataset by. Defaults to None.
-        overwrite (bool): If True, overwrites the existing dataset at the destination.
-            Defaults to True.
-        schema (Optional[Any]): A schema to enforce on the DataFrame before saving.
-            If provided, the DataFrame will be cast to the specified schema.
-    """
-    if overwrite and Path(save_path).exists():
-        shutil.rmtree(save_path)
-    if schema:
-        logger.warning(f"we have yet to implement this {schema}")
-    df.to_parquet(save_path, partition_cols=partition_cols, index=None)
 
 
 def save_parquet_data_by_pyspark(

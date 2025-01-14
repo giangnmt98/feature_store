@@ -8,17 +8,22 @@ materialization, training, and inference operations into a cohesive pipeline.
 import pandas as pd
 from feathr import FeathrClient
 
+from configs.conf import NUM_DATE_EVAL
 from featurestore.base.utils.logger import logger
 from featurestore.pipeline.infer_pipeline import InferPipeline
 from featurestore.pipeline.materialize_pipeline import MaterializePipeline
 from featurestore.pipeline.training_pipeline import TrainingPipeline
 from featurestore.preprocess.feature_preprocessing import (
     ABUserFeaturePreprocessing,
-    ContentFeaturePreprocessing,
     UserFeaturePreprocessing,
 )
-from featurestore.preprocess.online_feature_preprocessing import (
+from featurestore.preprocess.interaction_feature_preprocessing import (
     InteractedFeaturePreprocessing,
+)
+from featurestore.preprocess.item_feature_preprocessing import (
+    ContentFeaturePreprocessing,
+)
+from featurestore.preprocess.online_feature_preprocessing import (
     OnlineItemFeaturePreprocessing,
     OnlineUserFeaturePreprocessing,
 )
@@ -49,6 +54,7 @@ class FeaturePipeline:
     def __init__(
         self,
         raw_data_path: str,
+        infer_date: str,
         feathr_workspace_folder: str = "",
         feature_registry_config_path: str = "",
         training_pipeline_config_path: str = "",
@@ -58,6 +64,8 @@ class FeaturePipeline:
         process_lib: str = "pandas",
     ):
         self.raw_data_path = raw_data_path
+        self.infer_date = infer_date
+        print("====================== infer_date:", self.infer_date)
         if feathr_workspace_folder == "":
             self.client = None
         else:
@@ -99,6 +107,7 @@ class FeaturePipeline:
             config_path=self.training_pipeline_config_path,
             feathr_client=self.client,
             raw_data_path=self.raw_data_path,
+            infer_date=self.infer_date,
         ).run()
 
     def materialize_online_features(self):
@@ -109,6 +118,7 @@ class FeaturePipeline:
             config_path=self.materialize_pipeline_config_path,
             feathr_client=self.client,
             raw_data_path=self.raw_data_path,
+            infer_date=self.infer_date,
         ).run()
 
     def materialize_offline_features(self):
@@ -120,6 +130,8 @@ class FeaturePipeline:
             feathr_client=self.client,
             materialize_for_eval=True,
             raw_data_path=self.raw_data_path,
+            infer_date=self.infer_date,
+            num_date_eval=NUM_DATE_EVAL,
         ).run()
 
     def get_features_for_infer_pipeline(self):

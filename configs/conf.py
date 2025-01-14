@@ -32,12 +32,8 @@ class SpareFeatureInfo(metaclass=SingletonMeta):
             user_id, item_id) to their predefined bucket sizes, used for hashing large feature spaces.
         num_user_to_bucket_size (Dict[int, int]): A dictionary mapping the number of users
             in the dataset to appropriate hash bucket sizes for user-related hashed features.
-
-    Usage:
-        Use this class in pipelines where sparse feature encoding and hashing are required
-        for categorical or high-cardinality features. The singleton pattern ensures a single
-        source of truth for feature configurations across the system.
     """
+
     # encoded features with key is feature name and value is dict of encoded value
     # feature_name: {encoded_value: index}
     encoded_features: Dict[str, Dict] = {
@@ -274,12 +270,8 @@ class DhashSpareFeatureInfo(SpareFeatureInfo):
         hashed_features (Dict[str, int]): A dictionary mapping dhash feature names
             (e.g., hashed_user_id_v2, hashed_item_id_v2) to their respective bucket sizes,
             as well as hashed features from the base class.
-
-    Usage:
-        This class is tailored for scenarios where double hashing is needed, such as feature
-        engineering in very large-scale systems. It ensures consistent hashing configurations
-        for both primary and double-hash feature representations.
     """
+
     num_user_to_dhash_bucket_size = {
         10000: 10007,
         100000: 100003,
@@ -345,7 +337,8 @@ VOD_TYPE_GROUP = [
     "78",
 ]
 
-ROLLING_PERIOD_FOR_PREFER_TYPE = 30
+ROLLING_PERIOD_FOR_USER_PREFER_TYPE = 30
+ROLLING_PERIOD_FOR_POPULARITY_ITEM = 30
 
 HASHED_CONTENT_CATEGORY_BS = 4001
 HASHED_NUMBER_MONTHS_FROM_PUBLISH_BS = 997
@@ -493,3 +486,16 @@ valid_package_code = {
     "MYTV020": "Goi chuan moi",  # Galaxy thu 7
     "MYTV019": "Goi Co ban moi",  # Galaxy thu 7
 }
+
+SELECTED_HISTORY_COLUMNS = [
+    "content_id",
+    "content_type",
+    "username",
+    "profile_id",
+    "duration",
+    "date_time",
+    "filename_date",
+    "part",
+]
+
+NUM_DATE_EVAL = 3
