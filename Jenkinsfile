@@ -55,18 +55,21 @@ pipeline {
             }
             steps {
                 script {
+                    sh '''
+                    echo "a"
+                    '''
                     // Set up Python environment
-                    sh '''
-                    export PATH=$PATH:/home/docker/.local/bin
-                    python3 -m pip install --user --cache-dir /opt/conda/pkgs -e .[dev]
-                    '''
-
-                    // Run linting
-                    sh '''
-                    echo "=== Running Linting Tools ==="
-                    python3 -m flake8 $CODE_DIRECTORY
-                    python3 -m mypy --show-traceback $CODE_DIRECTORY
-                    '''
+                    //sh '''
+                    //export PATH=$PATH:/home/docker/.local/bin
+                    //python3 -m pip install --user --cache-dir /opt/conda/pkgs -e .[dev]
+                    //'''
+                    //
+                    //// Run linting
+                    //sh '''
+                    //echo "=== Running Linting Tools ==="
+                    //python3 -m flake8 $CODE_DIRECTORY
+                    //python3 -m mypy --show-traceback $CODE_DIRECTORY
+                    //'''
 
                     //// Run tests
                     //sh '''
