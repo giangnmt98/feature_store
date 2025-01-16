@@ -87,7 +87,7 @@ post {
             def MESSAGE = "✅ *Jenkins Pipeline Success* ✅\n" +
                           "*Job*: ${env.JOB_NAME}\n" +
                           "*Build*: ${env.BUILD_NUMBER}\n" +
-                          "*View details*: ${emv.BUILD_URL}"
+                          "*View details*: ${env.BUILD_URL}"
 
             // Gửi thông báo qua Telegram
             sh """
@@ -104,7 +104,7 @@ post {
             def MESSAGE = "🚨 *Jenkins Pipeline Failed* 🚨\n" +
                           "*Job*: ${env.JOB_NAME}\n" +
                           "*Build*: ${env.BUILD_NUMBER}\n" +
-                          "*View details*: ${emv.BUILD_URL}"
+                          "*View details*: ${env.BUILD_URL}"
 
             // Gửi thông báo qua Telegram
             sh """
