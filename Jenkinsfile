@@ -122,7 +122,8 @@ post {
                 def date = new Date(timestamp)
                 return date.format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone("UTC"))
             }
-
+            def cause = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')
+            echo "userName: ${cause.userName}"
             // Tính thời gian bắt đầu, kết thúc, và thời lượng build
             def startTimestamp = currentBuild.startTimeInMillis
             def durationInMillis = currentBuild.duration ?: 0 // Dự phòng nếu không tồn tại duration
