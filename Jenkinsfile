@@ -15,7 +15,7 @@ pipeline {
                     // Check line count and changes
                     sh '''
                     echo "=== Checking lines of code in each file ==="
-                    MAX_LINES=700
+                    MAX_LINES=500
                     set +x
                     git ls-files | grep -Ev ".pylintrc|airflow.cfg|data" | while read -r file; do
                         line_count=$(wc -l < "$file")
@@ -48,8 +48,8 @@ pipeline {
         stage('Setup and Run Pipeline') {
             agent {
                 docker {
-                    image 'abc'
-                    args '-v /home/giang/.ssh:/home/docker/.ssh --gpus all'
+                    image 'test'
+                    args '-v /home/giang/.ssh:/home/root/.ssh --gpus all'
                 }
             }
             steps {
