@@ -89,7 +89,6 @@ post {
                 return date.format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone("UTC"))
             }
             def cause = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')
-            echo "userName: ${cause.userName}"
             // Tính thời gian bắt đầu, kết thúc, và thời lượng build
             def startTimestamp = currentBuild.startTimeInMillis
             def durationInMillis = currentBuild.duration ?: 0 // Dự phòng nếu không tồn tại duration
@@ -102,12 +101,13 @@ post {
             // Tạo thông báo gửi về Telegram với HTML
             def MESSAGE = """
                 ✅ <b>Jenkins Pipeline Success</b> ✅\n
-                <b>Job</b>: ${env.JOB_NAME}\n
-                <b>Build</b>: ${env.BUILD_NUMBER}\n
-                <b>Start Time</b>: ${startTime}\n
-                <b>End Time</b>: ${endTime}\n
-                <b>Duration</b>: ${duration}\n
-                <b>View Details</b>: <a href="${env.BUILD_URL}">Build Link</a>
+                   <b>Job</b>: ${env.JOB_NAME}\n
+                   <b>Build</b>: ${env.BUILD_NUMBER}\n
+                   <b>By user: </b>: ${cause.userName}\n
+                   <b>Start Time</b>: ${startTime}\n
+                   <b>End Time</b>: ${endTime}\n
+                   <b>Duration</b>: ${duration}\n
+                   <b>View Details</b>: <a href="${env.BUILD_URL}">Build Link</a>
             """
 
             // Gửi thông báo Telegram
@@ -127,7 +127,7 @@ post {
                 return date.format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone("UTC"))
             }
             def cause = currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause')
-            echo "userName: ${cause.userName}"
+
             // Tính thời gian bắt đầu, kết thúc, và thời lượng build
             def startTimestamp = currentBuild.startTimeInMillis
             def durationInMillis = currentBuild.duration ?: 0 // Dự phòng nếu không tồn tại duration
@@ -140,12 +140,13 @@ post {
             // Tạo thông báo lỗi để gửi Telegram với HTML
             def MESSAGE = """
                 🚨 <b>Jenkins Pipeline Failed</b> 🚨\n
-                <b>Job</b>: ${env.JOB_NAME}\n
-                <b>Build</b>: ${env.BUILD_NUMBER}\n
-                <b>Start Time</b>: ${startTime}\n
-                <b>End Time</b>: ${endTime}\n
-                <b>Duration</b>: ${duration}\n
-                <b>View Details</b>: <a href="${env.BUILD_URL}">Build Link</a>
+                   <b>Job</b>: ${env.JOB_NAME}\n
+                   <b>Build</b>: ${env.BUILD_NUMBER}\n
+                   <b>By user: </b>: ${cause.userName}\n
+                   <b>Start Time</b>: ${startTime}\n
+                   <b>End Time</b>: ${endTime}\n
+                   <b>Duration</b>: ${duration}\n
+                   <b>View Details</b>: <a href="${env.BUILD_URL}">Build Link</a>
             """
 
             // Gửi thông báo Telegram
