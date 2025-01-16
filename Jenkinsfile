@@ -101,7 +101,7 @@ post {
                           "*Job*: ${JOB_NAME}\n" +
                           "*Build*: ${env.BUILD_NUMBER}\n" +
                           "*Triggered by*: ${BUILD_USER_ESCAPED}\n" +
-                          "[View details](${env.BUILD_URL})"
+                          "*View details*: ${BUILD_URL}"
 
             // Gửi thông báo qua Telegram
             sh """
