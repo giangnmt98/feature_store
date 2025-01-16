@@ -3,7 +3,7 @@ pipeline {
     environment {
         CODE_DIRECTORY = 'featurestore'
         TELEGRAM_BOT_TOKEN = '7897102108:AAEm888B6NUD4zRvlNfmvSCzNC94955cevg' // Thay bằng token của bot Telegram
-        TELEGRAM_CHAT_ID = '2032100419'    // Thay bằng chat ID của bạn hoặc nhóm
+        TELEGRAM_CHAT_ID = '-4756039048'    // Thay bằng chat ID của bạn hoặc nhóm
     }
     options {
         timestamps()
@@ -84,7 +84,15 @@ pipeline {
         failure {
             echo "Pipeline failed."
             script {
-                def MESSAGE = "🚨 Jenkins Pipeline Failed 🚨\nJob: ${env.JOB_NAME}\nBuild: ${env.BUILD_NUMBER}\nView details at ${env.BUILD_URL}"
+                // Lấy chi tiết lỗi
+                def ERROR_LOG = sh(script: 'tail -n 20 "${WORKSPACE}/logs/failed.log" || echo "No detailed logs available."', returnStdout: true).trim()
+
+                // Gửi tin nhắn qua Telegram với tên job, lỗi và link
+                def MESSAGE = "🚨 Jenkins Pipeline Failed 🚨\n" +
+                              "Job: ${env.JOB_NAME}\n" +
+                              "Build: ${env.BUILD_NUMBER}\n" +
+                              "Error: \n${ERROR_LOG}\n" +
+                              "View details at: ${env.BUILD_URL}"
                 sh """
                 curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
                 -d chat_id=${TELEGRAM_CHAT_ID} \
