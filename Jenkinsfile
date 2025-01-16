@@ -97,12 +97,12 @@ post {
 
             // Tạo thông báo gửi về Telegram với HTML
             def MESSAGE = """
-                ✅ <b>Jenkins Pipeline Success</b> ✅<br>
-                <b>Job</b>: ${env.JOB_NAME}<br>
-                <b>Build</b>: ${env.BUILD_NUMBER}<br>
-                <b>Start Time</b>: ${startTime}<br>
-                <b>End Time</b>: ${endTime}<br>
-                <b>Duration</b>: ${duration}<br>
+                ✅ <b>Jenkins Pipeline Success</b> ✅\n
+                <b>Job</b>: ${env.JOB_NAME}\n
+                <b>Build</b>: ${env.BUILD_NUMBER}\n
+                <b>Start Time</b>: ${startTime}\n
+                <b>End Time</b>: ${endTime}\n
+                <b>Duration</b>: ${duration}\n
                 <b>View Details</b>: <a href="${env.BUILD_URL}">Build Link</a>
             """
 
@@ -135,12 +135,12 @@ post {
 
             // Tạo thông báo lỗi để gửi Telegram với HTML
             def MESSAGE = """
-                🚨 <b>Jenkins Pipeline Failed</b> 🚨<br>
-                <b>Job</b>: ${env.JOB_NAME}<br>
-                <b>Build</b>: ${env.BUILD_NUMBER}<br>
-                <b>Start Time</b>: ${startTime}<br>
-                <b>End Time</b>: ${endTime}<br>
-                <b>Duration</b>: ${duration}<br>
+                🚨 <b>Jenkins Pipeline Failed</b> 🚨\n
+                <b>Job</b>: ${env.JOB_NAME}\n
+                <b>Build</b>: ${env.BUILD_NUMBER}\n
+                <b>Start Time</b>: ${startTime}\n
+                <b>End Time</b>: ${endTime}\n
+                <b>Duration</b>: ${duration}\n
                 <b>View Details</b>: <a href="${env.BUILD_URL}">Build Link</a>
             """
 
