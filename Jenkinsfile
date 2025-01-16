@@ -3,7 +3,7 @@ pipeline {
     environment {
         CODE_DIRECTORY = 'featurestore'
         TELEGRAM_BOT_TOKEN = '7897102108:AAEm888B6NUD4zRvlNfmvSCzNC94955cevg' // Thay bằng token của bot Telegram
-        TELEGRAM_CHAT_ID = '2032100419'    // Thay bằng chat ID(Phải start chat với bot trước)  hoặc nhóm
+        TELEGRAM_CHAT_ID = '2032100419'    // Thay bằng chat ID (phải start chat với bot trước) hoặc nhóm
     }
     options {
         timestamps()
@@ -13,7 +13,6 @@ pipeline {
         stage('Check Code') {
             steps {
                 script {
-                    // Check line count and changes
                     sh '''
                     echo "=== Checking lines of code in each file ==="
                     MAX_LINES=500
@@ -55,27 +54,25 @@ pipeline {
             }
             steps {
                 script {
-                    sh '''
-                    echo "a"
-                    '''
                     // Set up Python environment
-                    //sh '''
-                    //export PATH=$PATH:/home/docker/.local/bin
-                    //python3 -m pip install --user --cache-dir /opt/conda/pkgs -e .[dev]
-                    //'''
-                    //
-                    //// Run linting
-                    //sh '''
-                    //echo "=== Running Linting Tools ==="
-                    //python3 -m flake8 $CODE_DIRECTORY
-                    //python3 -m mypy --show-traceback $CODE_DIRECTORY
-                    //'''
+                    sh '''
+                    export PATH=$PATH:/home/docker/.local/bin
+                    python3 -m pip install --user --cache-dir /opt/conda/pkgs -e .[dev]
+                    '''
 
-                    //// Run tests
-                    //sh '''
-                    //echo "=== Running Tests ==="
-                    //python3 -m pytest -s --durations=0 --disable-warnings tests/
-                    //'''
+                    // Run linting
+                    sh '''
+                    echo "=== Running Linting Tools ==="
+                    python3 -m flake8 $CODE_DIRECTORY
+                    python3 -m mypy --show-traceback $CODE_DIRECTORY
+                    python3 -m pylint --disable=R0913,R0903,R0902,R0914,W0718 ./${FEATURESTORE_FOLDER}/
+                    '''
+
+                    // Run tests
+                    sh '''
+                    echo "=== Running Tests ==="
+                    python3 -m pytest -s --durations=0 --disable-warnings tests/
+                    '''
                 }
             }
         }
@@ -83,13 +80,36 @@ pipeline {
 post {
     success {
         script {
-            // Tạo nội dung tin nhắn với MarkdownV2
-            def MESSAGE = "✅ *Jenkins Pipeline Success* ✅\n" +
-                          "*Job*: ${env.JOB_NAME}\n" +
-                          "*Build*: ${env.BUILD_NUMBER}\n" +
-                          "*View details*: ${env.BUILD_URL}"
+            // Hàm format timestamp sang định dạng ngày/giờ
+            def formatTimestamp = { timestamp ->
+                def date = new Date(timestamp)
+                return date.format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone("UTC"))
+            }
 
-            // Gửi thông báo qua Telegram
+            // Tính thời gian bắt đầu, kết thúc, và thời lượng build
+            def startTimestamp = currentBuild.startTimeInMillis
+            def durationInMillis = currentBuild.duration ?: 0 // Dự phòng nếu không tồn tại duration
+            def endTimestamp = startTimestamp + durationInMillis
+
+            def startTime = formatTimestamp(startTimestamp)
+            def endTime = formatTimestamp(endTimestamp)
+            def duration = currentBuild.durationString ?: "Unknown duration"
+
+            // Escape MarkdownV2 ký tự đặc biệt
+            def escapeMarkdownV2 = { text ->
+                text.replaceAll('([_\\*\\[\\]\\(\\)~`>#+\\-=|{}.!])', '\\\\$1')
+            }
+
+            // Tạo thông báo gửi về Telegram
+            def MESSAGE = "✅ *Jenkins Pipeline Success* ✅\n" +
+                          "*Job*: ${escapeMarkdownV2(env.JOB_NAME)}\n" +
+                          "*Build*: ${escapeMarkdownV2(env.BUILD_NUMBER)}\n" +
+                          "*Start Time*: ${escapeMarkdownV2(startTime)}\n" +
+                          "*End Time*: ${escapeMarkdownV2(endTime)}\n" +
+                          "*Duration*: ${escapeMarkdownV2(duration)}\n" +
+                          "*View Details*: [Build Link](${env.BUILD_URL})"
+
+            // Gửi thông báo Telegram
             sh """
             curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
             -d chat_id=${TELEGRAM_CHAT_ID} \
@@ -100,13 +120,36 @@ post {
     }
     failure {
         script {
-            // Tạo nội dung tin nhắn với MarkdownV2
-            def MESSAGE = "🚨 *Jenkins Pipeline Failed* 🚨\n" +
-                          "*Job*: ${env.JOB_NAME}\n" +
-                          "*Build*: ${env.BUILD_NUMBER}\n" +
-                          "*View details*: ${env.BUILD_URL}"
+            // Hàm format timestamp sang định dạng ngày/giờ
+            def formatTimestamp = { timestamp ->
+                def date = new Date(timestamp)
+                return date.format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone("UTC"))
+            }
 
-            // Gửi thông báo qua Telegram
+            // Tính thời gian bắt đầu, kết thúc, và thời lượng build
+            def startTimestamp = currentBuild.startTimeInMillis
+            def durationInMillis = currentBuild.duration ?: 0 // Dự phòng nếu không tồn tại duration
+            def endTimestamp = startTimestamp + durationInMillis
+
+            def startTime = formatTimestamp(startTimestamp)
+            def endTime = formatTimestamp(endTimestamp)
+            def duration = currentBuild.durationString ?: "Unknown duration"
+
+            // Escape MarkdownV2 ký tự đặc biệt
+            def escapeMarkdownV2 = { text ->
+                text.replaceAll('([_\\*\\[\\]\\(\\)~`>#+\\-=|{}.!])', '\\\\$1')
+            }
+
+            // Tạo thông báo lỗi để gửi Telegram
+            def MESSAGE = "🚨 *Jenkins Pipeline Failed* 🚨\n" +
+                          "*Job*: ${escapeMarkdownV2(env.JOB_NAME)}\n" +
+                          "*Build*: ${escapeMarkdownV2(env.BUILD_NUMBER)}\n" +
+                          "*Start Time*: ${escapeMarkdownV2(startTime)}\n" +
+                          "*End Time*: ${escapeMarkdownV2(endTime)}\n" +
+                          "*Duration*: ${escapeMarkdownV2(duration)}\n" +
+                          "*View Details*: [Build Link](${env.BUILD_URL})"
+
+            // Gửi thông báo Telegram
             sh """
             curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
             -d chat_id=${TELEGRAM_CHAT_ID} \
