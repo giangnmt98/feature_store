@@ -78,12 +78,9 @@ pipeline {
         }
     }
 post {
-    failure {
-        echo "Pipeline failed."
+        failure {
+            echo "Pipeline failed."
         script {
-            // Lấy chi tiết lỗi
-            def ERROR_LOG = sh(script: 'tail -n 20 "${WORKSPACE}/logs/failed.log" || echo "No detailed logs available."', returnStdout: true).trim()
-
             // Tạo nội dung tin nhắn với Markdown
             def MESSAGE = "🚨 *Jenkins Pipeline Failed* 🚨\n" +
                           "*Job*: ${env.JOB_NAME}\n" +
@@ -99,4 +96,5 @@ post {
             """
         }
     }
+}
 }
