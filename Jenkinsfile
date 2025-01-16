@@ -89,8 +89,8 @@ post {
             }
 
             // Lấy tên người thực hiện build
-            def BUILD_USER = env.BUILD_USER ?: "Unknown User"
-            echo "${env.BUILD_USER}"
+            def BUILD_USER = env.BUILD_USER_ID ?: "Unknown User"
+            echo "${env.BUILD_USER_ID}"
             // Escape tất cả chuỗi đặc biệt
             def JOB_NAME = escapeMarkdownV2(env.JOB_NAME)
             def BUILD_URL = escapeMarkdownV2(env.BUILD_URL)
