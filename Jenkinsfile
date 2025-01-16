@@ -3,7 +3,7 @@ pipeline {
     environment {
         CODE_DIRECTORY = 'featurestore'
         TELEGRAM_BOT_TOKEN = '7897102108:AAEm888B6NUD4zRvlNfmvSCzNC94955cevg' // Thay bằng token của bot Telegram
-        TELEGRAM_CHAT_ID = '2032100419'    // Thay bằng chat ID của bạn hoặc nhóm
+        TELEGRAM_CHAT_ID = '2032100419'    // Thay bằng chat ID(Phải start chat với bot trước)  hoặc nhóm
     }
     options {
         timestamps()
@@ -83,25 +83,11 @@ pipeline {
 post {
     success {
         script {
-            // Hàm escape ký tự đặc biệt cho MarkdownV2 (định nghĩa bên trong script block)
-            def escapeMarkdownV2 = { text ->
-                text?.replaceAll('([_\\*\\[\\]\\(\\)~`>#+\\-=|{}.!])', '\\\\$1')
-            }
-
-            // Lấy tên người thực hiện build
-            def BUILD_USER = env.BUILD_USER ?: "Unknown User"
-            echo "${env.BUILD_USER}"
-            // Escape tất cả chuỗi đặc biệt
-            def JOB_NAME = escapeMarkdownV2(env.JOB_NAME)
-            def BUILD_URL = escapeMarkdownV2(env.BUILD_URL)
-            def BUILD_USER_ESCAPED = escapeMarkdownV2(BUILD_USER)
-
             // Tạo nội dung tin nhắn với MarkdownV2
             def MESSAGE = "✅ *Jenkins Pipeline Success* ✅\n" +
-                          "*Job*: ${JOB_NAME}\n" +
+                          "*Job*: ${env.JOB_NAME}\n" +
                           "*Build*: ${env.BUILD_NUMBER}\n" +
-                          "*Triggered by*: ${BUILD_USER_ESCAPED}\n" +
-                          "*View details*: ${BUILD_URL}"
+                          "*View details*: ${emv.BUILD_URL}"
 
             // Gửi thông báo qua Telegram
             sh """
@@ -114,25 +100,11 @@ post {
     }
     failure {
         script {
-            // Hàm escape ký tự đặc biệt cho MarkdownV2 (định nghĩa bên trong script block)
-            def escapeMarkdownV2 = { text ->
-                text?.replaceAll('([_\\*\\[\\]\\(\\)~`>#+\\-=|{}.!])', '\\\\$1')
-            }
-
-            // Lấy tên người thực hiện build
-            def BUILD_USER = env.BUILD_USER ?: "Unknown User"
-
-            // Escape tất cả chuỗi đặc biệt
-            def JOB_NAME = escapeMarkdownV2(env.JOB_NAME)
-            def BUILD_URL = escapeMarkdownV2(env.BUILD_URL)
-            def BUILD_USER_ESCAPED = escapeMarkdownV2(BUILD_USER)
-
             // Tạo nội dung tin nhắn với MarkdownV2
             def MESSAGE = "🚨 *Jenkins Pipeline Failed* 🚨\n" +
-                          "*Job*: ${JOB_NAME}\n" +
+                          "*Job*: ${env.JOB_NAME}\n" +
                           "*Build*: ${env.BUILD_NUMBER}\n" +
-                          "*Triggered by*: ${BUILD_USER_ESCAPED}\n" +
-                          "*View details*: ${BUILD_URL}"
+                          "*View details*: ${emv.BUILD_URL}"
 
             // Gửi thông báo qua Telegram
             sh """
