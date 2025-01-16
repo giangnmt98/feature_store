@@ -95,25 +95,22 @@ post {
             def endTime = formatTimestamp(endTimestamp)
             def duration = currentBuild.durationString ?: "Unknown duration"
 
-            // Escape MarkdownV2 ký tự đặc biệt
-            def escapeMarkdownV2 = { text ->
-                text.replaceAll('([*\\[\\]\\(\\)~`>#+\\-=|{}.!])', '\\\\$1')
-            }
-
-            // Tạo thông báo gửi về Telegram
-            def MESSAGE = "✅ *Jenkins Pipeline Success* ✅\n" +
-                          "*Job*: ${escapeMarkdownV2(env.JOB_NAME)}\n" +
-                          "*Build*: ${escapeMarkdownV2(env.BUILD_NUMBER)}\n" +
-                          "*Start Time*: ${escapeMarkdownV2(startTime)}\n" +
-                          "*End Time*: ${escapeMarkdownV2(endTime)}\n" +
-                          "*Duration*: ${escapeMarkdownV2(duration)}\n" +
-                          "*View Details*: ${env.BUILD_URL}"
+            // Tạo thông báo gửi về Telegram với HTML
+            def MESSAGE = """
+                ✅ <b>Jenkins Pipeline Success</b> ✅<br>
+                <b>Job</b>: ${env.JOB_NAME}<br>
+                <b>Build</b>: ${env.BUILD_NUMBER}<br>
+                <b>Start Time</b>: ${startTime}<br>
+                <b>End Time</b>: ${endTime}<br>
+                <b>Duration</b>: ${duration}<br>
+                <b>View Details</b>: <a href="${env.BUILD_URL}">Build Link</a>
+            """
 
             // Gửi thông báo Telegram
             sh """
             curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
             -d chat_id=${TELEGRAM_CHAT_ID} \
-            -d parse_mode=MarkdownV2 \
+            -d parse_mode=HTML \
             -d text="${MESSAGE}"
             """
         }
@@ -135,25 +132,22 @@ post {
             def endTime = formatTimestamp(endTimestamp)
             def duration = currentBuild.durationString ?: "Unknown duration"
 
-            // Escape MarkdownV2 ký tự đặc biệt
-            def escapeMarkdownV2 = { text ->
-                text.replaceAll('([_\\*\\[\\]\\(\\)~`>#+\\-=|{}.!])', '\\\\$1')
-            }
-
-            // Tạo thông báo lỗi để gửi Telegram
-            def MESSAGE = "🚨 *Jenkins Pipeline Failed* 🚨\n" +
-                          "*Job*: ${escapeMarkdownV2(env.JOB_NAME)}\n" +
-                          "*Build*: ${escapeMarkdownV2(env.BUILD_NUMBER)}\n" +
-                          "*Start Time*: ${escapeMarkdownV2(startTime)}\n" +
-                          "*End Time*: ${escapeMarkdownV2(endTime)}\n" +
-                          "*Duration*: ${escapeMarkdownV2(duration)}\n" +
-                          "*View Details*: ${env.BUILD_URL}"
+            // Tạo thông báo lỗi để gửi Telegram với HTML
+            def MESSAGE = """
+                🚨 <b>Jenkins Pipeline Failed</b> 🚨<br>
+                <b>Job</b>: ${env.JOB_NAME}<br>
+                <b>Build</b>: ${env.BUILD_NUMBER}<br>
+                <b>Start Time</b>: ${startTime}<br>
+                <b>End Time</b>: ${endTime}<br>
+                <b>Duration</b>: ${duration}<br>
+                <b>View Details</b>: <a href="${env.BUILD_URL}">Build Link</a>
+            """
 
             // Gửi thông báo Telegram
             sh """
             curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
             -d chat_id=${TELEGRAM_CHAT_ID} \
-            -d parse_mode=MarkdownV2 \
+            -d parse_mode=HTML \
             -d text="${MESSAGE}"
             """
         }
