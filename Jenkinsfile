@@ -77,28 +77,26 @@ pipeline {
             }
         }
     }
-    post {
-        success {
-            echo "Pipeline completed successfully."
-        }
-        failure {
-            echo "Pipeline failed."
-            script {
-                // Lấy chi tiết lỗi
-                def ERROR_LOG = sh(script: 'tail -n 20 "${WORKSPACE}/logs/failed.log" || echo "No detailed logs available."', returnStdout: true).trim()
+post {
+    failure {
+        echo "Pipeline failed."
+        script {
+            // Lấy chi tiết lỗi
+            def ERROR_LOG = sh(script: 'tail -n 20 "${WORKSPACE}/logs/failed.log" || echo "No detailed logs available."', returnStdout: true).trim()
 
-                // Gửi tin nhắn qua Telegram với tên job, lỗi và link
-                def MESSAGE = "🚨 Jenkins Pipeline Failed 🚨\n" +
-                              "Job: ${env.JOB_NAME}\n" +
-                              "Build: ${env.BUILD_NUMBER}\n" +
-                              "Error: \n${ERROR_LOG}\n" +
-                              "View details at: ${env.BUILD_URL}"
-                sh """
-                curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
-                -d chat_id=${TELEGRAM_CHAT_ID} \
-                -d text="${MESSAGE}"
-                """
-            }
+            // Tạo nội dung tin nhắn với Markdown
+            def MESSAGE = "🚨 *Jenkins Pipeline Failed* 🚨\n" +
+                          "*Job*: ${env.JOB_NAME}\n" +
+                          "*Build*: ${env.BUILD_NUMBER}\n" +
+                          "[View details](${env.BUILD_URL})"
+
+            // Gửi tin nhắn qua Telegram với định dạng Markdown
+            sh """
+            curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
+            -d chat_id=${TELEGRAM_CHAT_ID} \
+            -d parse_mode=Markdown \
+            -d text="${MESSAGE}"
+            """
         }
     }
 }
