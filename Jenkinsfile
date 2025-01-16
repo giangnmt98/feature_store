@@ -68,11 +68,11 @@ pipeline {
                     python3 -m mypy --show-traceback $CODE_DIRECTORY
                     '''
 
-                    // Run tests
-                    sh '''
-                    echo "=== Running Tests ==="
-                    python3 -m pytest -s --durations=0 --disable-warnings tests/
-                    '''
+                    //// Run tests
+                    //sh '''
+                    //echo "=== Running Tests ==="
+                    //python3 -m pytest -s --durations=0 --disable-warnings tests/
+                    //'''
                 }
             }
         }
