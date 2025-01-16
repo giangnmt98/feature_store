@@ -97,7 +97,13 @@ post {
             def startTime = formatTimestamp(startTimestamp)
             def endTime = formatTimestamp(endTimestamp)
             def duration = currentBuild.durationString ?: "Unknown duration"
-
+            def escapeHtml = { text ->
+                text.replaceAll('&', '&amp;') // Escape '&'
+                    .replaceAll('<', '&lt;') // Escape '<'
+                    .replaceAll('>', '&gt;') // Escape '>'
+                    .replaceAll('"', '&quot;') // Escape '"'
+            }
+            def buildUrl = escapeHtml(env.BUILD_URL)
             // Tạo thông báo gửi về Telegram với HTML
             def MESSAGE = """
                 ✅ <b>Jenkins Pipeline Success</b> ✅\n
@@ -107,7 +113,7 @@ post {
                    <b>Start Time</b>: ${startTime}\n
                    <b>End Time</b>: ${endTime}\n
                    <b>Duration</b>: ${duration}\n
-                   <b>View Details</b>: <a href=""${env.BUILD_URL}"">Build Link</a>
+                   <b>View Details</b>: <a href=""${buildUrl}"">Build Link</a>
             """
 
             // Gửi thông báo Telegram
@@ -136,6 +142,13 @@ post {
             def startTime = formatTimestamp(startTimestamp)
             def endTime = formatTimestamp(endTimestamp)
             def duration = currentBuild.durationString ?: "Unknown duration"
+            def escapeHtml = { text ->
+                text.replaceAll('&', '&amp;') // Escape '&'
+                    .replaceAll('<', '&lt;') // Escape '<'
+                    .replaceAll('>', '&gt;') // Escape '>'
+                    .replaceAll('"', '&quot;') // Escape '"'
+            }
+            def buildUrl = escapeHtml(env.BUILD_URL)
 
             // Tạo thông báo lỗi để gửi Telegram với HTML
             def MESSAGE = """
@@ -146,7 +159,7 @@ post {
                    <b>Start Time</b>: ${startTime}\n
                    <b>End Time</b>: ${endTime}\n
                    <b>Duration</b>: ${duration}\n
-                   <b>View Details</b>: <a href=""${env.BUILD_URL}"">Build Link</a>
+                   <b>View Details</b>: <a href="${buildUrl}">Build Link</a>
             """
 
             // Gửi thông báo Telegram
