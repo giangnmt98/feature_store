@@ -86,12 +86,17 @@ post {
             // Lấy tên người thực hiện build
             def BUILD_USER = env.BUILD_USER ?: "Unknown User"
 
+            // Escape tất cả chuỗi đặc biệt
+            def JOB_NAME = escapeMarkdownV2(env.JOB_NAME)
+            def BUILD_URL = escapeMarkdownV2(env.BUILD_URL)
+            def BUILD_USER_ESCAPED = escapeMarkdownV2(BUILD_USER)
+
             // Tạo nội dung tin nhắn với MarkdownV2
             def MESSAGE = "✅ *Jenkins Pipeline Success* ✅\n" +
-                          "*Job*: ${env.JOB_NAME?.replaceAll('\\.', '\\\\.')}\n" +
+                          "*Job*: ${JOB_NAME}\n" +
                           "*Build*: ${env.BUILD_NUMBER}\n" +
-                          "*Triggered by*: ${BUILD_USER?.replaceAll('\\.', '\\\\.')}\n" +
-                          "[View details](${env.BUILD_URL?.replaceAll('\\.', '\\\\.')})"
+                          "*Triggered by*: ${BUILD_USER_ESCAPED}\n" +
+                          "[View details](${BUILD_URL})"
 
             // Gửi thông báo qua Telegram
             sh """
@@ -107,12 +112,17 @@ post {
             // Lấy tên người thực hiện build
             def BUILD_USER = env.BUILD_USER ?: "Unknown User"
 
+            // Escape tất cả chuỗi đặc biệt
+            def JOB_NAME = escapeMarkdownV2(env.JOB_NAME)
+            def BUILD_URL = escapeMarkdownV2(env.BUILD_URL)
+            def BUILD_USER_ESCAPED = escapeMarkdownV2(BUILD_USER)
+
             // Tạo nội dung tin nhắn với MarkdownV2
             def MESSAGE = "🚨 *Jenkins Pipeline Failed* 🚨\n" +
-                          "*Job*: ${env.JOB_NAME?.replaceAll('\\.', '\\\\.')}\n" +
+                          "*Job*: ${JOB_NAME}\n" +
                           "*Build*: ${env.BUILD_NUMBER}\n" +
-                          "*Triggered by*: ${BUILD_USER?.replaceAll('\\.', '\\\\.')}\n" +
-                          "[View details](${env.BUILD_URL?.replaceAll('\\.', '\\\\.')})"
+                          "*Triggered by*: ${BUILD_USER_ESCAPED}\n" +
+                          "[View details](${BUILD_URL})"
 
             // Gửi thông báo qua Telegram
             sh """
@@ -123,5 +133,10 @@ post {
             """
         }
     }
+}
+
+// Hàm thoát ký tự đặc biệt MarkdownV2
+def escapeMarkdownV2(String text) {
+    return text?.replaceAll('([_\\*\\[\\]\\(\\)~`>#+\\-=|{}.!])', '\\\\$1')
 }
 }
