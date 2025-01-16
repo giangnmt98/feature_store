@@ -3,12 +3,11 @@ pipeline {
     environment {
         CODE_DIRECTORY = 'featurestore'
         TELEGRAM_BOT_TOKEN = '7897102108:AAEm888B6NUD4zRvlNfmvSCzNC94955cevg' // Thay bằng token của bot Telegram
-        TELEGRAM_CHAT_ID = '-4756039048'    // Thay bằng chat ID của bạn hoặc nhóm
+        TELEGRAM_CHAT_ID = '2032100419'    // Thay bằng chat ID của bạn hoặc nhóm
     }
     options {
         timestamps()
         disableConcurrentBuilds()
-        withBuildUser()
     }
     stages {
         stage('Check Code') {
@@ -133,7 +132,7 @@ post {
                           "*Job*: ${JOB_NAME}\n" +
                           "*Build*: ${env.BUILD_NUMBER}\n" +
                           "*Triggered by*: ${BUILD_USER_ESCAPED}\n" +
-                          "[View details](${BUILD_URL})"
+                          "*View details*: ${BUILD_URL}"
 
             // Gửi thông báo qua Telegram
             sh """
