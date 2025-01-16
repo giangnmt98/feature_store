@@ -486,7 +486,6 @@ valid_package_code = {
     "MYTV020": "Goi chuan moi",  # Galaxy thu 7
     "MYTV019": "Goi Co ban moi",  # Galaxy thu 7
 }
-
 SELECTED_HISTORY_COLUMNS = [
     "content_id",
     "content_type",
@@ -497,5 +496,4 @@ SELECTED_HISTORY_COLUMNS = [
     "filename_date",
     "part",
 ]
-
 NUM_DATE_EVAL = 3
