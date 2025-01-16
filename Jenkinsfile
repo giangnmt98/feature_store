@@ -83,6 +83,11 @@ pipeline {
 post {
     success {
         script {
+            // Hàm escape ký tự đặc biệt cho MarkdownV2 (định nghĩa bên trong script block)
+            def escapeMarkdownV2 = { text ->
+                text?.replaceAll('([_\\*\\[\\]\\(\\)~`>#+\\-=|{}.!])', '\\\\$1')
+            }
+
             // Lấy tên người thực hiện build
             def BUILD_USER = env.BUILD_USER ?: "Unknown User"
 
@@ -109,6 +114,11 @@ post {
     }
     failure {
         script {
+            // Hàm escape ký tự đặc biệt cho MarkdownV2 (định nghĩa bên trong script block)
+            def escapeMarkdownV2 = { text ->
+                text?.replaceAll('([_\\*\\[\\]\\(\\)~`>#+\\-=|{}.!])', '\\\\$1')
+            }
+
             // Lấy tên người thực hiện build
             def BUILD_USER = env.BUILD_USER ?: "Unknown User"
 
@@ -133,10 +143,5 @@ post {
             """
         }
     }
-}
-
-// Hàm thoát ký tự đặc biệt MarkdownV2
-def escapeMarkdownV2(String text) {
-    return text?.replaceAll('([_\\*\\[\\]\\(\\)~`>#+\\-=|{}.!])', '\\\\$1')
 }
 }
