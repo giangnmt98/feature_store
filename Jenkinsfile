@@ -89,8 +89,7 @@ post {
             }
 
             // Lấy tên người thực hiện build
-            def BUILD_USER = env.BUILD_USER ?: "Unknown User"
-
+            def BUILD_USER = $BUILD_USER ?: "Unknown User"
             // Escape tất cả chuỗi đặc biệt
             def JOB_NAME = escapeMarkdownV2(env.JOB_NAME)
             def BUILD_URL = escapeMarkdownV2(env.BUILD_URL)
@@ -101,7 +100,7 @@ post {
                           "*Job*: ${JOB_NAME}\n" +
                           "*Build*: ${env.BUILD_NUMBER}\n" +
                           "*Triggered by*: ${BUILD_USER_ESCAPED}\n" +
-                          "[View details](${BUILD_URL})"
+                          "[View details](${env.BUILD_URL})"
 
             // Gửi thông báo qua Telegram
             sh """
