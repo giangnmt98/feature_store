@@ -78,38 +78,44 @@ pipeline {
         }
     }
 post {
-        success {
-            echo "Pipeline completed successfully."
+    success {
         script {
-                // Tạo nội dung tin nhắn khi thành công
-            def MESSAGE = "✅ *Jenkins Pipeline Success* ✅\n" +
-                          "*Job*: ${env.JOB_NAME}\n" +
-                          "*Build*: ${env.BUILD_NUMBER}\n" +
-                          "[View details](${env.BUILD_URL})"
+            // Lấy tên người thực hiện build
+            def BUILD_USER = env.BUILD_USER ?: "Unknown User"
 
-            // Gửi tin nhắn qua Telegram với định dạng Markdown
+            // Tạo nội dung tin nhắn với MarkdownV2
+            def MESSAGE = "✅ *Jenkins Pipeline Success* ✅\n" +
+                          "*Job*: ${env.JOB_NAME?.replaceAll('\\.', '\\\\.')}\n" +
+                          "*Build*: ${env.BUILD_NUMBER}\n" +
+                          "*Triggered by*: ${BUILD_USER?.replaceAll('\\.', '\\\\.')}\n" +
+                          "[View details](${env.BUILD_URL?.replaceAll('\\.', '\\\\.')})"
+
+            // Gửi thông báo qua Telegram
             sh """
             curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
             -d chat_id=${TELEGRAM_CHAT_ID} \
-            -d parse_mode=Markdown \
+            -d parse_mode=MarkdownV2 \
             -d text="${MESSAGE}"
             """
         }
     }
     failure {
-            echo "Pipeline failed."
         script {
-                // Tạo nội dung tin nhắn khi thất bại
-            def MESSAGE = "🚨 *Jenkins Pipeline Failed* 🚨\n" +
-                          "*Job*: ${env.JOB_NAME}\n" +
-                          "*Build*: ${env.BUILD_NUMBER}\n" +
-                          "[View details](${env.BUILD_URL})"
+            // Lấy tên người thực hiện build
+            def BUILD_USER = env.BUILD_USER ?: "Unknown User"
 
-            // Gửi tin nhắn qua Telegram với định dạng Markdown
+            // Tạo nội dung tin nhắn với MarkdownV2
+            def MESSAGE = "🚨 *Jenkins Pipeline Failed* 🚨\n" +
+                          "*Job*: ${env.JOB_NAME?.replaceAll('\\.', '\\\\.')}\n" +
+                          "*Build*: ${env.BUILD_NUMBER}\n" +
+                          "*Triggered by*: ${BUILD_USER?.replaceAll('\\.', '\\\\.')}\n" +
+                          "[View details](${env.BUILD_URL?.replaceAll('\\.', '\\\\.')})"
+
+            // Gửi thông báo qua Telegram
             sh """
             curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
             -d chat_id=${TELEGRAM_CHAT_ID} \
-            -d parse_mode=Markdown \
+            -d parse_mode=MarkdownV2 \
             -d text="${MESSAGE}"
             """
         }
