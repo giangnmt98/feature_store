@@ -56,7 +56,8 @@ pipeline {
                 script {
                     // Set up Python environment
                     sh '''
-                    python3 -m pip install --cache-dir /opt/conda/pkgs -e .[dev]
+                    export PATH=$PATH:/home/docker/.local/bin
+                    python3 -m pip install --user --cache-dir /opt/conda/pkgs -e .[dev]
                     '''
 
                     // Run linting
