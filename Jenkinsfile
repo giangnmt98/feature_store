@@ -65,7 +65,7 @@ pipeline {
                     echo "=== Running Linting Tools ==="
                     python3 -m flake8 $CODE_DIRECTORY
                     python3 -m mypy --show-traceback $CODE_DIRECTORY
-                    python3 -m pylint --disable=R0913,R0903,R0902,R0914,W0718 ./${$CODE_DIRECTORY}/
+                    python3 -m pylint --disable=R0913,R0903,R0902,R0914,W0718 $CODE_DIRECTORY
                     '''
 
                     // Run tests
