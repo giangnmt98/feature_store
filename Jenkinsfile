@@ -100,14 +100,14 @@ post {
 
             // Tạo thông báo gửi về Telegram với HTML
             def MESSAGE = """
-                ✅ <b>Jenkins Pipeline Success ✅\n
-                <b>Job: ${env.JOB_NAME}\n
-                <b>Build: ${env.BUILD_NUMBER}\n
-                <b>By User: ${cause.userName}\n
-                <b>Start Time: ${startTime}\n
-                <b>End Time: ${endTime}\n
-                <b>Duration: ${duration}\n
-                <b>View Details: ${env.BUILD_URL}
+                ✅ Jenkins Pipeline Success ✅\n
+                Job: ${env.JOB_NAME}\n
+                Build: ${env.BUILD_NUMBER}\n
+                By User: ${cause.userName}\n
+                Start Time: ${startTime}\n
+                End Time: ${endTime}\n
+                Duration: ${duration}\n
+                View Details: ${env.BUILD_URL}
             """
 
             // Gửi thông báo Telegram
@@ -138,7 +138,7 @@ post {
 
             // Tạo thông báo lỗi để gửi Telegram với HTML
             def MESSAGE = """
-                🚨 <b>Jenkins Pipeline Failed 🚨\n
+                🚨 Jenkins Pipeline Failed 🚨\n
                 Job: ${env.JOB_NAME}\n
                 Build: ${env.BUILD_NUMBER}\n
                 By User: ${cause.userName}\n
