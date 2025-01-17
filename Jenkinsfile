@@ -54,24 +54,21 @@ pipeline {
             }
             steps {
                 script {
+                    // Set up Python environment
                     sh '''
-                  echo "1"
+                    export PATH=$PATH:/home/docker/.local/bin
+                    python3 -m pip install --user --cache-dir /opt/conda/pkgs -e .[dev]
                     '''
-                    //// Set up Python environment
-                    //sh '''
-                    //export PATH=$PATH:/home/docker/.local/bin
-                    //python3 -m pip install --user --cache-dir /opt/conda/pkgs -e .[dev]
-                    //'''
-                    //
-                    //// Run linting
-                    //sh '''
-                    //echo "=== Running Linting Tools ==="
-                    //python3 -m flake8 $CODE_DIRECTORY
-                    //python3 -m mypy --show-traceback $CODE_DIRECTORY
-                    //python3 -m pylint --disable=R0913,R0903,R0902,R0914,W0718 ./${FEATURESTORE_FOLDER}/
-                    //'''
-                    //
-                    //// Run tests
+
+                    // Run linting
+                    sh '''
+                    echo "=== Running Linting Tools ==="
+                    python3 -m flake8 $CODE_DIRECTORY
+                    python3 -m mypy --show-traceback $CODE_DIRECTORY
+                    python3 -m pylint --disable=R0913,R0903,R0902,R0914,W0718 ./${FEATURESTORE_FOLDER}/
+                    '''
+
+                    // Run tests
                     //sh '''
                     //echo "=== Running Tests ==="
                     //python3 -m pytest -s --durations=0 --disable-warnings tests/
