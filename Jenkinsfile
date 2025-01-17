@@ -135,7 +135,7 @@ post {
            def MESSAGE = " 🚨 Jenkins Pipeline Failed 🚨\n" +
              "Job: ${env.JOB_NAME}\n" +
              "Build: ${env.BUILD_NUMBER}\n" +
-             "By User: ${cause.userName'}\n" +
+             "By User: ${cause.userName}\n" +
              "Start Time: ${startTime}\n" +
              "End Time: ${endTime}\n" +
              "Duration: ${duration}\n" +
