@@ -97,30 +97,23 @@ post {
             def startTime = formatTimestamp(startTimestamp)
             def endTime = formatTimestamp(endTimestamp)
             def duration = currentBuild.durationString ?: "Unknown duration"
-            def escapeHtml = { text ->
-                text.replaceAll('&', '&amp;') // Escape '&'
-                    .replaceAll('<', '&lt;') // Escape '<'
-                    .replaceAll('>', '&gt;') // Escape '>'
-                    .replaceAll('"', '&quot;') // Escape '"'
-            }
-            def buildUrl = escapeHtml(env.BUILD_URL)
+
             // Tạo thông báo gửi về Telegram với HTML
             def MESSAGE = """
-                ✅ <b>Jenkins Pipeline Success</b> ✅\n
-                <b>Job</b>: ${env.JOB_NAME}\n
-                <b>Build</b>: ${env.BUILD_NUMBER}\n
-                <b>By User</b>: ${cause.userName}\n
-                <b>Start Time</b>: ${startTime}\n
-                <b>End Time</b>: ${endTime}\n
-                <b>Duration</b>: ${duration}\n
-                <b>View Details</b>: ${buildUrl}
+                ✅ <b>Jenkins Pipeline Success ✅\n
+                <b>Job: ${env.JOB_NAME}\n
+                <b>Build: ${env.BUILD_NUMBER}\n
+                <b>By User: ${cause.userName}\n
+                <b>Start Time: ${startTime}\n
+                <b>End Time: ${endTime}\n
+                <b>Duration: ${duration}\n
+                <b>View Details: ${env.BUILD_URL}
             """
 
             // Gửi thông báo Telegram
             sh """
             curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
             -d chat_id=${TELEGRAM_CHAT_ID} \
-            -d parse_mode=HTML \
             -d text="${MESSAGE}"
             """
         }
@@ -142,31 +135,23 @@ post {
             def startTime = formatTimestamp(startTimestamp)
             def endTime = formatTimestamp(endTimestamp)
             def duration = currentBuild.durationString ?: "Unknown duration"
-            def escapeHtml = { text ->
-                text.replaceAll('&', '&amp;') // Escape '&'
-                    .replaceAll('<', '&lt;') // Escape '<'
-                    .replaceAll('>', '&gt;') // Escape '>'
-                    .replaceAll('"', '&quot;') // Escape '"'
-            }
-            def buildUrl = escapeHtml(env.BUILD_URL)
 
             // Tạo thông báo lỗi để gửi Telegram với HTML
             def MESSAGE = """
-                🚨 <b>Jenkins Pipeline Failed</b> 🚨\n
-                <b>Job</b>: ${env.JOB_NAME}\n
-                <b>Build</b>: ${env.BUILD_NUMBER}\n
-                <b>By User</b>: ${cause.userName}\n
-                <b>Start Time</b>: ${startTime}\n
-                <b>End Time</b>: ${endTime}\n
-                <b>Duration</b>: ${duration}\n
-                <b>View Details</b>: ${buildUrl}
+                🚨 <b>Jenkins Pipeline Failed 🚨\n
+                Job: ${env.JOB_NAME}\n
+                Build: ${env.BUILD_NUMBER}\n
+                By User: ${cause.userName}\n
+                Start Time: ${startTime}\n
+                End Time: ${endTime}\n
+                Duration: ${duration}\n
+                View Details: ${env.BUILD_URL}
             """
 
             // Gửi thông báo Telegram
             sh """
             curl -s -X POST https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage \
             -d chat_id=${TELEGRAM_CHAT_ID} \
-            -d parse_mode=HTML \
             -d text="${MESSAGE}"
             """
         }
