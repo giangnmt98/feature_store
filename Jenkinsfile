@@ -99,16 +99,14 @@ post {
             def duration = currentBuild.durationString ?: "Unknown duration"
 
             // Tạo thông báo plain text để gửi tới Telegram
-            def MESSAGE = """
-                ✅ Jenkins Pipeline Success ✅
-                Job: ${env.JOB_NAME}
-                Build: ${env.BUILD_NUMBER}
-                By User: ${cause && cause[0]?.userName ?: "Unknown User"}
-                Start Time: ${startTime}
-                End Time: ${endTime}
-                Duration: ${duration}
-                View Details: ${env.BUILD_URL}
-            """
+           def MESSAGE = "✅ Jenkins Pipeline Success ✅\n" +
+                         "Job: ${env.JOB_NAME}\n" +
+                         "Build: ${env.BUILD_NUMBER}\n" +
+                         "By User: ${cause && cause[0]?.userName ?: 'Unknown User'}\n" +
+                         "Start Time: ${startTime}\n" +
+                         "End Time: ${endTime}\n" +
+                         "Duration: ${duration}\n" +
+                         "View Details: ${env.BUILD_URL}"
 
             // Gửi thông báo Telegram
             sh """
@@ -137,16 +135,14 @@ post {
             def duration = currentBuild.durationString ?: "Unknown duration"
 
             // Tạo thông báo plain text để gửi tới Telegram
-            def MESSAGE = """
-                🚨 Jenkins Pipeline Failed 🚨
-                Job: ${env.JOB_NAME}
-                Build: ${env.BUILD_NUMBER}
-                By User: ${cause && cause[0]?.userName ?: "Unknown User"}
-                Start Time: ${startTime}
-                End Time: ${endTime}
-                Duration: ${duration}
-                View Details: ${env.BUILD_URL}
-            """
+           def MESSAGE = " 🚨 Jenkins Pipeline Failed 🚨\n" +
+             "Job: ${env.JOB_NAME}\n" +
+             "Build: ${env.BUILD_NUMBER}\n" +
+             "By User: ${cause && cause[0]?.userName ?: 'Unknown User'}\n" +
+             "Start Time: ${startTime}\n" +
+             "End Time: ${endTime}\n" +
+             "Duration: ${duration}\n" +
+             "View Details: ${env.BUILD_URL}"
 
             // Gửi thông báo Telegram
             sh """
