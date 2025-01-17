@@ -49,15 +49,14 @@ pipeline {
             agent {
                 docker {
                     image 'test'
-                    args '-v /home/giang/.ssh:/home/docker/.ssh --gpus all'
+                    args '-v ~.ssh:/home/docker/.ssh --gpus all'
                 }
             }
             steps {
                 script {
                     // Set up Python environment
                     sh '''
-                    export PATH=$PATH:/home/docker/.local/bin
-                    python3 -m pip install --user --cache-dir /opt/conda/pkgs -e .[dev]
+                    python3 -m pip install --cache-dir /opt/conda/pkgs -e .[dev]
                     '''
 
                     // Run linting
