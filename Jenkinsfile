@@ -109,11 +109,11 @@ post {
                 ✅ <b>Jenkins Pipeline Success</b> ✅\n
                    <b>Job</b>: ${env.JOB_NAME}\n
                    <b>Build</b>: ${env.BUILD_NUMBER}\n
-                   <b>By User: </b>: ${cause.userName}\n
+                   <b>By User</b>: ${cause.userName}\n
                    <b>Start Time</b>: ${startTime}\n
                    <b>End Time</b>: ${endTime}\n
                    <b>Duration</b>: ${duration}\n
-                   <b>View Details</b>: <a href=""${buildUrl}"">Build Link</a>
+                   <b>View Details</b>: <a href="${buildUrl}">Build Link</a>
             """
 
             // Gửi thông báo Telegram
