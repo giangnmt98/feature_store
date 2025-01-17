@@ -81,9 +81,9 @@ pipeline {
         }
     }
 post {
-    success {
-        script {
-            // Hàm format timestamp sang định dạng ngày/giờ
+        success {
+            script {
+                // Hàm format timestamp sang định dạng ngày/giờ
             def formatTimestamp = { timestamp ->
                 def date = new Date(timestamp)
                 return date.format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone("UTC"))
@@ -98,15 +98,15 @@ post {
             def endTime = formatTimestamp(endTimestamp)
             def duration = currentBuild.durationString ?: "Unknown duration"
 
-            // Tạo thông báo gửi về Telegram với HTML
+            // Tạo thông báo plain text để gửi tới Telegram
             def MESSAGE = """
-                ✅ Jenkins Pipeline Success ✅\n
-                Job: ${env.JOB_NAME}\n
-                Build: ${env.BUILD_NUMBER}\n
-                By User: ${cause.userName}\n
-                Start Time: ${startTime}\n
-                End Time: ${endTime}\n
-                Duration: ${duration}\n
+                ✅ Jenkins Pipeline Success ✅
+                Job: ${env.JOB_NAME}
+                Build: ${env.BUILD_NUMBER}
+                By User: ${cause && cause[0]?.userName ?: "Unknown User"}
+                Start Time: ${startTime}
+                End Time: ${endTime}
+                Duration: ${duration}
                 View Details: ${env.BUILD_URL}
             """
 
@@ -119,8 +119,8 @@ post {
         }
     }
     failure {
-        script {
-            // Hàm format timestamp sang định dạng ngày/giờ
+            script {
+                // Hàm format timestamp sang định dạng ngày/giờ
             def formatTimestamp = { timestamp ->
                 def date = new Date(timestamp)
                 return date.format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone("UTC"))
@@ -136,15 +136,15 @@ post {
             def endTime = formatTimestamp(endTimestamp)
             def duration = currentBuild.durationString ?: "Unknown duration"
 
-            // Tạo thông báo lỗi để gửi Telegram với HTML
+            // Tạo thông báo plain text để gửi tới Telegram
             def MESSAGE = """
-                🚨 Jenkins Pipeline Failed 🚨\n
-                Job: ${env.JOB_NAME}\n
-                Build: ${env.BUILD_NUMBER}\n
-                By User: ${cause.userName}\n
-                Start Time: ${startTime}\n
-                End Time: ${endTime}\n
-                Duration: ${duration}\n
+                🚨 Jenkins Pipeline Failed 🚨
+                Job: ${env.JOB_NAME}
+                Build: ${env.BUILD_NUMBER}
+                By User: ${cause && cause[0]?.userName ?: "Unknown User"}
+                Start Time: ${startTime}
+                End Time: ${endTime}
+                Duration: ${duration}
                 View Details: ${env.BUILD_URL}
             """
 
