@@ -69,10 +69,10 @@ pipeline {
                     '''
 
                     // Run tests
-                    //sh '''
-                    //echo "=== Running Tests ==="
-                    //python3 -m pytest -s --durations=0 --disable-warnings tests/
-                    //'''
+                    sh '''
+                    echo "=== Running Tests ==="
+                    python3 -m pytest -s --durations=0 --disable-warnings tests/
+                    '''
                 }
             }
         }

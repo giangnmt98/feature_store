@@ -1,4 +1,4 @@
-#!/bin/bash
+đi #!/bin/bash
 
 # Constants
 MAX_LINES=500
