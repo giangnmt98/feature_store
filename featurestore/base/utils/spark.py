@@ -54,7 +54,7 @@ class SparkOperations(metaclass=SingletonMeta):
     def __init__(self, config_spark=None):
         self.atom = AtomicCounter()
         if config_spark is None:
-            cpu_factor = 0.5
+            cpu_factor = 0.7
             app_name = "spark-application"
             resource_info = ResourceInfo()
             num_cores = max(int((resource_info.num_cores - 1) * cpu_factor), 1)
