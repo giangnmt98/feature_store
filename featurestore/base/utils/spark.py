@@ -64,7 +64,7 @@ class SparkOperations(metaclass=SingletonMeta):
             driver_memory = f"{int(0.8*  memory )}g"
             executor_memory = f"{int(0.8* memory)}g"
             auto_broadcast_join_threshold = 10485760
-            base_checkpoint_dir = "/home/cuongit/BIGDATA/tmp/pyspark/"
+            base_checkpoint_dir = "/home/cuongit/BIGDATA/giang/test/tmp/pyspark/"
             if os.getenv("PREFIX_CHECKPOINT_DIR") is not None:
                 base_checkpoint_dir = (
                     os.getenv("PREFIX_CHECKPOINT_DIR") + base_checkpoint_dir
