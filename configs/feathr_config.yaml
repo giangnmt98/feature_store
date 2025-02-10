@@ -9,11 +9,7 @@ spark_config:
   local:
     master: 'local[*]'
     spark.sql.shuffle.partitions: '100'
-    feathr_runtime_location: "./vnpt_feathr-0.0.1.jar"
-    spark.local.dir: "/home/cuongit/BIGDATA/tmp/pyspark"
-    spark.sql.debug.maxToStringFields: "100"
-    spark.sql.execution.arrow.pyspark.enabled: "True"
-    spark.sql.crossJoin.enabled: "True"
+
 
 online_store:
   redis:
