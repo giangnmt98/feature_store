@@ -116,6 +116,7 @@ class SparkOperations(metaclass=SingletonMeta):
                 config_params["auto_broadcast_join_threshold"],
             )
             .config("spark.local.dir", full_checkpoint_dir)
+            .config("spark.scheduler.listenerbus.eventqueue.capacity", "20000")
         )
         self.partitions = config_params["partitions"]
         logger.info(
