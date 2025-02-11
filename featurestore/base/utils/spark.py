@@ -51,66 +51,81 @@ class SparkOperations(metaclass=SingletonMeta):
     Tập hợp funcs xử lý cho sparks
     """
 
-    def __init__(self, config_spark=None):
-        self.atom = AtomicCounter()
-        if config_spark is None:
-            cpu_factor = 0.7
-            app_name = "spark-application"
-            resource_info = ResourceInfo()
-            num_cores = max(int((resource_info.num_cores - 1) * cpu_factor), 1)
-            master = f"local[{num_cores}]"
-            partitions = num_cores
-            memory = resource_info.memory
-            driver_memory = f"{int(0.8*  memory )}g"
-            executor_memory = f"{int(0.8* memory)}g"
-            auto_broadcast_join_threshold = 10485760
-            base_checkpoint_dir = "/home/cuongit/BIGDATA/giang/test/tmp/pyspark/"
-            if os.getenv("PREFIX_CHECKPOINT_DIR") is not None:
-                base_checkpoint_dir = (
-                    os.getenv("PREFIX_CHECKPOINT_DIR") + base_checkpoint_dir
-                )
-            checkpoint_dir = (
-                base_checkpoint_dir + f"tmp_{self.atom.increment()}"
-                f"_{random.randint(10000, 100000)}"
+    def __init__(self, spark_config=None):
+        """
+        Initialize SparkOperations with configuration.
+        """
+
+        def generate_checkpoint_dir(base_dir: str) -> str:
+            """Generate a unique checkpoint directory."""
+            return (
+                base_dir + f"tmp_{self.atom.increment()}_{random.randint(10000,100000)}"
                 f"_{random.randint(100, 5000000)}"
             )
-            logger.info(
-                f"app_name={app_name} master={master} "
-                f"partitions={partitions} driver_memory={driver_memory} "
-                f"num_cores={num_cores} driver_memory={driver_memory} "
-                f"executor_memory={executor_memory} checkpoint_dir={checkpoint_dir}"
-            )
-        else:
-            app_name = config_spark.name
-            master = config_spark.master
-            params = config_spark.params
-            partitions = params.sql_shuffle_partitions
-            driver_memory = params.driver_memory
-            num_cores = params.num_cores
-            executor_memory = params.executor_memory
-            auto_broadcast_join_threshold = params.auto_broadcast_join_threshold
-            checkpoint_dir = params.checkpoint_dir
-        self.checkpoint_dir = checkpoint_dir
+
+        self.atom = AtomicCounter()
+        resource_info = ResourceInfo()
+        base_checkpoint_dir = os.getenv("PREFIX_CHECKPOINT_DIR", "")  # Common logic
+
+        if spark_config is None:  # Default spark configuration
+            default_cpu_factor = 0.7
+            memory_percentage = 0.8
+            default_broadcast_threshold = 10485760
+            app_name = "spark-application"
+            num_cores = max(int((resource_info.num_cores - 1) * default_cpu_factor), 1)
+            master = f"local[{num_cores}]"
+            memory = resource_info.memory
+
+            config_params = {
+                "partitions": num_cores,
+                "driver_memory": f"{int(memory_percentage * memory)}g",
+                "executor_memory": f"{int(memory_percentage * memory)}g",
+                "auto_broadcast_join_threshold": default_broadcast_threshold,
+            }
+        else:  # Custom spark configuration
+            app_name = spark_config["name"]
+            master = spark_config["master"]
+            params = spark_config["params"]
+            num_cores = params["num_cores"]
+            config_params = {
+                "partitions": params["sql_shuffle_partitions"],
+                "driver_memory": params["driver_memory"],
+                "executor_memory": params["executor_memory"],
+                "auto_broadcast_join_threshold": params[
+                    "auto_broadcast_join_threshold"
+                ],
+            }
+
+        # Assign base_checkpoint_dir and calculate checkpoint
+        full_checkpoint_dir = generate_checkpoint_dir(base_checkpoint_dir)
+
+        # Initialize Spark configurations
         self.spark_config = (
             SparkSession.builder.appName(app_name)
             .master(master)
-            .config("spark.sql.shuffle.partitions", partitions)
-            .config("spark.driver.memory", driver_memory)
-            .config("spark.executor.memory", executor_memory)
+            .config("spark.sql.shuffle.partitions", config_params["partitions"])
+            .config("spark.driver.memory", config_params["driver_memory"])
+            .config("spark.executor.memory", config_params["executor_memory"])
             .config("spark.sql.execution.arrow.pyspark.enabled", True)
             .config("spark.sql.files.ignoreCorruptFiles", True)
             .config("spark.sql.files.ignoreMissingFiles", True)
             .config("spark.executor.cores", num_cores)
             .config("spark.driver.cores", num_cores)
-            .config("spark.driver.maxResultSize", "100g")
             .config(
                 "spark.sql.autoBroadcastJoinThreshold",
-                auto_broadcast_join_threshold,
+                config_params["auto_broadcast_join_threshold"],
             )
-            .config("spark.local.dir", self.checkpoint_dir)
+            .config("spark.local.dir", full_checkpoint_dir)
         )
-        self.partitions = partitions
-        # https://spark.apache.org/docs/latest/sql-data-sources-generic-options.html
+        self.partitions = config_params["partitions"]
+        logger.info(
+            f"app_name={app_name} master={master} "
+            f"partitions={config_params['partitions']} "
+            f"driver_memory={config_params['driver_memory']} "
+            f"executor_memory={config_params['executor_memory']} "
+            f"checkpoint_dir={full_checkpoint_dir}"
+        )
+        self.checkpoint_dir = full_checkpoint_dir
         self.__spark = self.__init_spark_session()
         atexit.register(self.clean_tmp_data)
 

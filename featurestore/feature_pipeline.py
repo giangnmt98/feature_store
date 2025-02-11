@@ -62,6 +62,7 @@ class FeaturePipeline:
         infer_pipeline_config_path: str = "",
         user_id_df=pd.DataFrame(),
         process_lib: str = "pandas",
+        spark_config: dict = {},
     ):
         self.raw_data_path = raw_data_path
         self.infer_date = infer_date
@@ -76,18 +77,31 @@ class FeaturePipeline:
         self.infer_pipeline_config_path = infer_pipeline_config_path
         self.user_id_df = user_id_df
         self.process_lib = process_lib
+        self.spark_config = spark_config
 
     def preprocess_features(self):
         """
         Preprocesses raw data to generate features required for different categories.
         Utilizes modular preprocessing implementations for each specific feature type.
         """
-        UserFeaturePreprocessing(self.process_lib, self.raw_data_path).run()
-        ABUserFeaturePreprocessing(self.process_lib, self.raw_data_path).run()
-        ContentFeaturePreprocessing(self.process_lib, self.raw_data_path).run()
-        InteractedFeaturePreprocessing(self.process_lib, self.raw_data_path).run()
-        OnlineItemFeaturePreprocessing(self.process_lib, self.raw_data_path).run()
-        OnlineUserFeaturePreprocessing(self.process_lib, self.raw_data_path).run()
+        UserFeaturePreprocessing(
+            self.process_lib, self.raw_data_path, spark_config=self.spark_config
+        ).run()
+        ABUserFeaturePreprocessing(
+            self.process_lib, self.raw_data_path, spark_config=self.spark_config
+        ).run()
+        ContentFeaturePreprocessing(
+            self.process_lib, self.raw_data_path, spark_config=self.spark_config
+        ).run()
+        InteractedFeaturePreprocessing(
+            self.process_lib, self.raw_data_path, spark_config=self.spark_config
+        ).run()
+        OnlineItemFeaturePreprocessing(
+            self.process_lib, self.raw_data_path, spark_config=self.spark_config
+        ).run()
+        OnlineUserFeaturePreprocessing(
+            self.process_lib, self.raw_data_path, spark_config=self.spark_config
+        ).run()
 
     def register_features(self):
         """

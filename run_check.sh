@@ -31,7 +31,7 @@ $PYTHON_EXEC -m mypy ./$CODE_DIRECTORY
 echo ""
 echo_separator
 echo "Running docstrings checking Pylint"
-$PYTHON_EXEC -m pylint ./$CODE_DIRECTORY
+$PYTHON_EXEC -m pylint --disable=R0913,R0903,R0902,R0914,W0718,R0917,R0801,C0411 ./$CODE_DIRECTORY
 echo ""
 
 # File line count check

@@ -46,6 +46,7 @@ if __name__ == "__main__":
             materialize_pipeline_config_path=config["materialize_pipeline_config_path"],
             infer_pipeline_config_path=config["infer_pipeline_config_path"],
             process_lib=config["process_lib"],
+            spark_config=config["spark_config"],
         ).run_all()
     finally:
         print("\n")

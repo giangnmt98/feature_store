@@ -37,9 +37,14 @@ class OnlineItemFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
         raw_data_path="data/processed/",
         save_filename=DataName.ONLINE_ITEM_FEATURES,
         data_name_to_get_new_dates=DataName.MOVIE_HISTORY,
+        spark_config=None,
     ):
         super().__init__(
-            process_lib, raw_data_path, save_filename, data_name_to_get_new_dates
+            process_lib,
+            raw_data_path,
+            save_filename,
+            data_name_to_get_new_dates,
+            spark_config,
         )
 
     def preprocess_feature(self, df):
@@ -161,9 +166,14 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
         raw_data_path="data/processed/",
         save_filename=DataName.ONLINE_USER_FEATURES,
         data_name_to_get_new_dates=DataName.MOVIE_HISTORY,
+        spark_config=None,
     ):
         super().__init__(
-            process_lib, raw_data_path, save_filename, data_name_to_get_new_dates
+            process_lib,
+            raw_data_path,
+            save_filename,
+            data_name_to_get_new_dates,
+            spark_config,
         )
 
     def preprocess_feature(self, df):
