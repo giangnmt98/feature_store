@@ -25,7 +25,6 @@ if __name__ == "__main__":
             destination_file = os.path.join(
                 current_directory, os.path.basename(feathr_jar_path)
             )
-
             # Kiểm tra nếu file chưa tồn tại thì thực hiện copy
             if not os.path.exists(destination_file):
                 shutil.copy(feathr_jar_path, destination_file)
