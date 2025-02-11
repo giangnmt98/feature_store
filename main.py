@@ -37,6 +37,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Error copying file: {e}")
     try:
+        print("=" * 50)
         FeaturePipeline(
             raw_data_path=config["raw_data_path"],
             infer_date=config["infer_date"],
