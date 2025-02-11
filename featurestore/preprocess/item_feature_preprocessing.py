@@ -37,9 +37,14 @@ class ContentFeaturePreprocessing(BaseDailyFeaturePreprocessing):
         raw_data_path="data/processed/",
         save_filename=DataName.CONTENT_INFO,
         data_name_to_get_new_dates=DataName.CONTENT_INFO,
+        spark_config=None,
     ):
         super().__init__(
-            process_lib, raw_data_path, save_filename, data_name_to_get_new_dates
+            process_lib,
+            raw_data_path,
+            save_filename,
+            data_name_to_get_new_dates,
+            spark_config,
         )
 
     def read_processed_data(self):

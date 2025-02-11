@@ -3,12 +3,13 @@ project_config:
   project_name: mytv_feathr
 
 spark_config:
-  # choice for spark runtime. Currently support: azure_synapse, databricks, local
+  # choice for spark runtime. Currently, support: azure_synapse, databricks, local
   spark_cluster: 'local'
   spark_result_output_parts: '1'
   local:
     master: 'local[*]'
-    spark.sql.shuffle.partitions: '100'
+    feathr_runtime_location: "./vnpt_feathr-0.0.1.jar"
+
 
 
 online_store:

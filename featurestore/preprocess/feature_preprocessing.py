@@ -228,8 +228,9 @@ class UserFeaturePreprocessing(BaseFeaturePreprocessing):
         process_lib="pandas",
         raw_data_path="data/processed/",
         save_filename=DataName.USER_INFO,
+        spark_config=None,
     ):
-        super().__init__(process_lib, raw_data_path, save_filename)
+        super().__init__(process_lib, raw_data_path, save_filename, spark_config)
 
     def read_processed_data(self):
         account_df = AccountFeaturePreprocessing(
@@ -274,8 +275,9 @@ class ABUserFeaturePreprocessing(BaseFeaturePreprocessing):
         process_lib="pandas",
         raw_data_path="data/processed/",
         save_filename=DataName.AB_TESTING_USER_INFO,
+        spark_config=None,
     ):
-        super().__init__(process_lib, raw_data_path, save_filename)
+        super().__init__(process_lib, raw_data_path, save_filename, spark_config)
 
     def read_processed_data(self):
         data_path = self.raw_data_dir / f"{DataName.AB_TESTING_USER_INFO}.parquet"

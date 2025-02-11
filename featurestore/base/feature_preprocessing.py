@@ -33,6 +33,7 @@ class BaseFeaturePreprocessing(ABC):
         process_lib="pandas",
         raw_data_path="data/processed/",
         save_filename="",
+        spark_config=None,
     ):
         """
         Initializes the feature preprocessing instance.
@@ -48,9 +49,8 @@ class BaseFeaturePreprocessing(ABC):
         self.save_filename = save_filename
         self.raw_data: Dict[str, Any] = {}
         self.save_path = self.save_data_dir / f"{self.save_filename}.parquet"
-
         if self.process_lib == "pyspark":
-            self.spark = SparkOperations().get_spark_session()
+            self.spark = SparkOperations(spark_config).get_spark_session()
         else:
             self.spark = None
 
@@ -280,8 +280,9 @@ class BaseDailyFeaturePreprocessing(BaseFeaturePreprocessing):
         raw_data_path="data/processed/",
         save_filename="",
         data_name_to_get_new_dates="",
+        spark_config=None,
     ):
-        super().__init__(process_lib, raw_data_path, save_filename)
+        super().__init__(process_lib, raw_data_path, save_filename, spark_config)
         self.filename_date_col = conf.FILENAME_DATE_COL
         self.data_name_to_get_new_dates = data_name_to_get_new_dates
         self.dates_to_extract = self._get_new_dates()
@@ -432,12 +433,14 @@ class BaseOnlineFeaturePreprocessing(BaseDailyFeaturePreprocessing):
         raw_data_path="data/processed/",
         save_filename="",
         data_name_to_get_new_dates=DataName.MOVIE_HISTORY,
+        spark_config=None,
     ):
         super().__init__(
             process_lib,
             raw_data_path,
             save_filename,
             data_name_to_get_new_dates,
+            spark_config,
         )
 
     def _get_full_date_to_extract(self):
