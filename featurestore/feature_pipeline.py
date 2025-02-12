@@ -62,7 +62,7 @@ class FeaturePipeline:
         infer_pipeline_config_path: str = "",
         user_id_df=pd.DataFrame(),
         process_lib: str = "pandas",
-        spark_config: dict = {},
+        spark_config: dict = None,
     ):
         self.raw_data_path = raw_data_path
         self.infer_date = infer_date

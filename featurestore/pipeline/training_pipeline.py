@@ -65,7 +65,6 @@ class TrainingPipeline:
         self.for_date = infer_date
 
         self.is_init_df = self._check_output_data_path()
-        print("AAAAAAAAAAAAAAAAAAAAAAAAA", self.is_init_df)
         if self.is_init_df:
             self.observation_source_path = (
                 self.raw_data_path / f"{DataName.OBSERVATION_FEATURES}.parquet"
@@ -75,10 +74,7 @@ class TrainingPipeline:
                 / "features"
                 / f"init_{DataName.OFFLINE_FEATURES}.parquet"
             )
-            print(self.observation_source_path)
-            print(self.output_path)
         else:
-            print("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
             self.for_date = get_date_before(int(self.for_date), num_days_before=1)
             self.observation_source_path = (
                 self.raw_data_path
@@ -91,8 +87,6 @@ class TrainingPipeline:
                 / f"{DataName.OFFLINE_FEATURES}.parquet"
                 / f"{configs.conf.FILENAME_DATE_COL}={self.for_date}"
             )
-            print(self.observation_source_path)
-            print(self.output_path)
 
         self.key_collection = KeyDefinition().key_collection
         self.feature_query: List[str] = []
@@ -193,6 +187,5 @@ class TrainingPipeline:
         """
         self.query_feature()
         self._get_offline_features()
-        print(self._get_result_df())
         if self.is_init_df:
             self._repartition_offline_df()
