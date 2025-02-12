@@ -23,7 +23,7 @@ dependencies = [
 "psutil==6.1.0",
 "scipy==1.13.1",
 "flask-session==0.5.0",
-"pylint==3.3.4",
+"plotly==5.18.0", "pylint",
 "feathr @ git+ssh://git@github-test-feathr-deploy/giangnmt98/feathr_deploy.git#subdirectory=feathr_project"]
 
 [project.optional-dependencies]
