@@ -117,6 +117,7 @@ class SparkOperations(metaclass=SingletonMeta):
             )
             .config("spark.local.dir", full_checkpoint_dir)
             .config("spark.scheduler.listenerbus.eventqueue.capacity", "20000")
+            .config("spark.sql.files.maxPartitionBytes", "64MB")
         )
         self.partitions = config_params["partitions"]
         logger.info(

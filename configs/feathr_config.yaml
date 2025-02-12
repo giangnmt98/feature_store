@@ -13,6 +13,7 @@ spark_config:
 
 
 
+
 online_store:
   redis:
     # Redis configs to access Redis cluster
