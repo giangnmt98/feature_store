@@ -54,7 +54,7 @@ class SparkOperations(metaclass=SingletonMeta):
     def __init__(self, config_spark=None):
         self.atom = AtomicCounter()
         if config_spark is None:
-            cpu_factor = 0.5
+            cpu_factor = 0.8
             app_name = "spark-application"
             resource_info = ResourceInfo()
             num_cores = max(int((resource_info.num_cores - 1) * cpu_factor), 1)
@@ -64,7 +64,7 @@ class SparkOperations(metaclass=SingletonMeta):
             driver_memory = f"{int(0.7*  memory )}g"
             executor_memory = f"{int(0.7* memory)}g"
             auto_broadcast_join_threshold = 10485760
-            base_checkpoint_dir = "/tmp/pyspark/"
+            base_checkpoint_dir = "/home/cuongit/BIGDATA/giang/test/tmp/pyspark/"
             if os.getenv("PREFIX_CHECKPOINT_DIR") is not None:
                 base_checkpoint_dir = (
                     os.getenv("PREFIX_CHECKPOINT_DIR") + base_checkpoint_dir
