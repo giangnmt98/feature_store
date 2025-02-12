@@ -188,6 +188,6 @@ class TrainingPipeline:
         """
         self.query_feature()
         self._get_offline_features()
-        # self._get_result_df()
+        print(self._get_result_df())
         if self.is_init_df:
             self._repartition_offline_df()
