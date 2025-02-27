@@ -70,9 +70,7 @@ class TrainingPipeline:
                 self.raw_data_path / f"{DataName.OBSERVATION_FEATURES}.parquet"
             )
             self.output_path = (
-                self.raw_data_path
-                / "features"
-                / f"init_{DataName.OFFLINE_FEATURES}.parquet"
+                self.raw_data_path / "features" / f"{DataName.OFFLINE_FEATURES}.parquet"
             )
         else:
             self.for_date = get_date_before(int(self.for_date), num_days_before=1)
@@ -187,5 +185,3 @@ class TrainingPipeline:
         """
         self.query_feature()
         self._get_offline_features()
-        if self.is_init_df:
-            self._repartition_offline_df()

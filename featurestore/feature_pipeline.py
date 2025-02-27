@@ -63,6 +63,8 @@ class FeaturePipeline:
         user_id_df=pd.DataFrame(),
         process_lib: str = "pandas",
         spark_config: dict = None,
+        job_retry: int = 10,
+        job_retry_sec: int = 60,
     ):
         self.raw_data_path = raw_data_path
         self.infer_date = infer_date
@@ -70,7 +72,11 @@ class FeaturePipeline:
         if feathr_workspace_folder == "":
             self.client = None
         else:
-            self.client = FeathrClient(feathr_workspace_folder)
+            self.client = FeathrClient(
+                feathr_workspace_folder,
+                job_retry=job_retry,
+                job_retry_sec=job_retry_sec,
+            )
         self.feature_registry_config_path = feature_registry_config_path
         self.training_pipeline_config_path = training_pipeline_config_path
         self.materialize_pipeline_config_path = materialize_pipeline_config_path
@@ -178,5 +184,3 @@ class FeaturePipeline:
         self.materialize_online_features()
         logger.info("MATERIALIZE OFFLINE FEATURES")
         self.materialize_offline_features()
-        # logger.info("GET INFERRING FEATURES")
-        # self.get_features_for_infer_pipeline()
