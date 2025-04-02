@@ -140,52 +140,43 @@ class HashingClass(metaclass=SingletonMeta):
             after_length = len(df)
 
         elif process_lib == "pyspark":
-            df = df.cache()
             before_length = df.count()
-            # Tạo output_feature dựa trên version mà không tạo cột tạm "tmp"
             if version in [0, 1]:
                 df = df.withColumn(
-                    output_feature,
-                    (
-                        F.conv(F.md5(F.col(dependency_col)).substr(1, 15), 16, 10).cast(
-                            LongType()
-                        )
-                        % hash_bucket_size
-                    ),
+                    "tmp",
+                    F.md5(F.col(dependency_col)).substr(1, 15),
                 )
+
             elif version == 2:
                 df = df.withColumn(
-                    output_feature,
-                    (
-                        F.conv(
-                            F.md5(F.col(dependency_col)).substr(18, 15), 16, 10
-                        ).cast(LongType())
-                        % hash_bucket_size
-                    ),
+                    "tmp",
+                    F.md5(F.col(dependency_col)).substr(18, 15),
                 )
 
-            # Nếu có rehash_id, xử lý thêm để kiểm tra collision
-            if rehash_id and version != 0:
-                # Sử dụng broadcast join nếu số lượng rehash_id nhỏ
-                collision_df = df.sparkSession.createDataFrame(
-                    rehash_id, StringType()
-                ).withColumnRenamed("value", dependency_col)
-                collision_df = collision_df.withColumn("cond", F.lit("1"))
-                df = df.join(
-                    F.broadcast(collision_df), on=dependency_col, how="left"
-                ).na.fill({"cond": "0"})
+            df = df.withColumn(
+                output_feature,
+                F.conv(F.col("tmp"), 16, 10).cast(LongType()) % hash_bucket_size,
+            ).drop("tmp")
 
-                # Cập nhật giá trị output_feature theo logic (khi thỏa mãn điều kiện cond)
+            if rehash_id != [] and version != 0:
+                collision_df = (
+                    df.sparkSession.createDataFrame(rehash_id, StringType())
+                    .withColumnRenamed("value", dependency_col)
+                    .drop_duplicates()
+                )
+                collision_df = collision_df.withColumn("cond", F.lit("1"))
+                df = df.join(collision_df, on=dependency_col, how="left").na.fill(
+                    {"cond": "0"}
+                )
+
                 df = df.withColumn(
                     output_feature,
                     F.when(F.col("cond") == cond_str, cond_fill).otherwise(
                         F.col(output_feature)
                     ),
                 ).drop("cond")
-            df = df.cache()
-            # Đảm bảo số lượng bản ghi không thay đổi
             after_length = df.count()
-            assert (
-                before_length == after_length
-            ), f"different length {before_length} {after_length}"
+        assert (
+            before_length == after_length
+        ), f"different length {before_length} {after_length}"
         return df
