@@ -6,6 +6,7 @@ in recommendation systems or predictive modeling. The preprocessing includes tas
 combine movie and video-on-demand (VOD) interaction data, create user and item keys,
 and perform transformations like negative sampling.
 """
+import time
 from typing import Union
 
 import pandas as pd
@@ -13,6 +14,7 @@ import pyspark.sql.functions as F
 from pyspark import StorageLevel
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import StringType
+from pyspark.sql.window import Window
 from tqdm import tqdm
 
 from configs import conf
@@ -158,153 +160,253 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
             # negative sampling
             logger.info("Negative sampling.")
             big_df = self._negative_sample(big_df)
-            big_df.persist(storageLevel=StorageLevel.MEMORY_ONLY)
-            big_df = big_df.checkpoint()
+            big_df = big_df.drop("username")
+            big_df = big_df.withColumn(
+                "content_type", F.col("content_type").cast("int")
+            )
+            big_df = big_df.withColumn("content_id", F.col("content_id").cast("int"))
+            big_df = big_df.withColumn("profile_id", F.col("profile_id").cast("int"))
+            # big_df = big_df.checkpoint()
+            big_df.cache()
         logger.info("Negative sampling...done!")
         return big_df
 
+    def _negative_sample_each_day_opt(
+        self, user_df, item_df, num_negative_samples: int, big_df
+    ):
+        start_time = time.time()
+        neg_interact_df = user_df.join(item_df, on="filename_date", how="inner")
+        join_time = time.time() - start_time
+
+        start_time = time.time()
+        mean_possible_samples_per_day = (
+            big_df.groupby(["filename_date"])
+            .count()
+            .agg(F.mean("count").alias("mean"))
+            .select("mean")
+            .first()[0]
+        )
+        reduced_pool_size = 1000 * num_negative_samples
+        sampling_fraction = reduced_pool_size / mean_possible_samples_per_day
+        if sampling_fraction < 1:
+            neg_interact_df = neg_interact_df.sample(
+                fraction=sampling_fraction, seed=40
+            )
+        sampling_time = time.time() - start_time
+
+        start_time = time.time()
+        window_spec = Window.partitionBy(
+            "user_id", "username", "profile_id", "filename_date", "is_vod_content"
+        ).orderBy(F.rand(seed=42))
+        neg_interact_df = (
+            neg_interact_df.withColumn("rn", F.row_number().over(window_spec))
+            .filter(F.col("rn") <= num_negative_samples)
+            .drop("rn")
+        )
+        window_time = time.time() - start_time
+
+        start_time = time.time()
+        split_col = F.split(F.col("item_id"), "#", 2)
+        neg_interact_df = (
+            neg_interact_df.withColumn("content_type", split_col[0])
+            .withColumn("content_id", split_col[1])
+            .withColumn("date_time", F.to_date(F.col("filename_date"), "yyyyMMdd"))
+            .withColumn("duration", F.lit(0))
+        )
+        output_time = time.time() - start_time
+
+        print(
+            f"Optimized - Join Time: {join_time:.2f}s, Sampling Time: {sampling_time:.2f}s, "
+            f"Window Time: {window_time:.2f}s, Output Time: {output_time:.2f}s"
+        )
+        return neg_interact_df
+
     def _negative_sample(self, big_df):
+        # Chạy code tối ưu
+        start_time = time.time()
         negative_sample_ratio = 12
-        if self.process_lib == "pandas":
-            mean_samples_per_day = (
-                big_df.groupby(
-                    [
-                        "user_id",
-                        "username",
-                        "profile_id",
-                        "is_vod_content",
-                        "filename_date",
-                    ]
-                )["item_id"]
-                .count()
-                .mean()
-            )
-            negative_samples_per_day = int(mean_samples_per_day * negative_sample_ratio)
-            item_df = big_df[
-                [
-                    "item_id",
-                    "content_id",
-                    "content_type",
-                    "filename_date",
-                    "is_vod_content",
-                ]
-            ].drop_duplicates()
-            user_df = big_df[
-                ["user_id", "username", "profile_id", "filename_date"]
-            ].drop_duplicates()
-            neg_interact_df = self._negative_sample_each_day(
-                user_df, item_df, negative_samples_per_day, big_df
-            )
-            neg_interact_df = neg_interact_df[big_df.columns]
-            result_df = pd.concat([big_df, neg_interact_df], ignore_index=True)
-        else:
-            mean_samples_per_day = (
-                big_df.groupby(["user_id", "username", "profile_id", "filename_date"])
-                .agg(F.count("item_id").alias("count"))
-                .agg(F.mean("count").alias("mean"))
-                .select("mean")
-                .first()[0]
-            )
-            negative_samples_per_day = int(mean_samples_per_day * negative_sample_ratio)
-            item_df = big_df.select(
-                "item_id",
-                "content_id",
-                "content_type",
-                "filename_date",
-                "is_vod_content",
-            ).dropDuplicates()
-            user_df = big_df.select(
-                "user_id", "username", "profile_id", "filename_date"
-            ).dropDuplicates()
-            neg_interact_df = self._negative_sample_each_day(
-                user_df, item_df, negative_samples_per_day, big_df
-            )
-            neg_interact_df = neg_interact_df.select(big_df.columns)
-            result_df = big_df.union(neg_interact_df)
+
+        mean_samples_per_day = (
+            big_df.groupby(["user_id", "username", "profile_id", "filename_date"])
+            .agg(F.count("item_id").alias("count"))
+            .agg(F.mean("count").alias("mean"))
+            .select("mean")
+            .first()[0]
+        )
+        negative_samples_per_day = int(mean_samples_per_day * negative_sample_ratio)
+        prep_time = time.time() - start_time
+
+        start_time = time.time()
+        item_df = big_df.select(
+            "item_id", "content_id", "content_type", "filename_date", "is_vod_content"
+        ).dropDuplicates()
+        user_df = big_df.select(
+            "user_id", "username", "profile_id", "filename_date"
+        ).dropDuplicates()
+        user_df.cache()
+        dedup_time = time.time() - start_time
+
+        start_time = time.time()
+        neg_interact_df = self._negative_sample_each_day_opt(
+            user_df, item_df, negative_samples_per_day, big_df
+        )
+        neg_time = time.time() - start_time
+        neg_interact_df.cache()
+        start_time = time.time()
+        neg_interact_df = neg_interact_df.select(big_df.columns)
+        result_df = big_df.union(neg_interact_df)
+        union_time = time.time() - start_time
+
+        total_time = time.time() - start_time
+        print(
+            f"Optimized Spark App - Prep Time: {prep_time:.2f}s, Dedup Time: {dedup_time:.2f}s, "
+            f"Neg Sampling Time: {neg_time:.2f}s, Union Time: {union_time:.2f}s, "
+            f"Total Time: {total_time:.2f}s"
+        )
         return result_df
 
-    def _negative_sample_each_day(
-        self,
-        user_df: Union[pd.DataFrame, DataFrame],
-        item_df: Union[pd.DataFrame, DataFrame],
-        num_negative_samples: int,
-        big_df: Union[pd.DataFrame, DataFrame],
-    ) -> Union[pd.DataFrame, DataFrame]:
-        if self.process_lib == "pandas":
-            assert isinstance(user_df, pd.DataFrame)
-            assert isinstance(item_df, pd.DataFrame)
-            user_df = user_df.set_index("filename_date")
-            item_df = item_df.set_index("filename_date")
-            filename_dates = user_df.index.unique()
-            date_batch_size = 5
-            filename_dates_batches = split_batches(filename_dates, date_batch_size)
-            neg_interact_dfs = []
-            for filename_date in tqdm(filename_dates_batches):
-                sub_user_df = user_df.loc[filename_date].reset_index()
-                sub_item_df = item_df.loc[filename_date].reset_index()
-                neg_interact_df = sub_user_df.merge(
-                    sub_item_df, how="inner", on="filename_date"
-                )
-                neg_interact_df = neg_interact_df.groupby(
-                    [
-                        "user_id",
-                        "username",
-                        "profile_id",
-                        "filename_date",
-                        "is_vod_content",
-                    ],
-                    as_index=False,
-                ).sample(n=num_negative_samples, random_state=42, replace=True)
-                neg_interact_df = neg_interact_df.drop_duplicates()
-                neg_interact_df["duration"] = 0
-                neg_interact_df["date_time"] = pd.to_datetime(
-                    neg_interact_df["filename_date"], format=conf.FILENAME_DATE_FORMAT
-                )
-                neg_interact_dfs.append(neg_interact_df)
-            neg_interact_df = pd.concat(neg_interact_dfs, ignore_index=True)
-        else:
-            neg_interact_df = user_df.join(item_df, on="filename_date", how="inner")
-            # global sampling to reduce sampling pool
-            # before perform stratified sampling
-            mean_possible_samples_per_day = (
-                big_df.groupby(["filename_date"])
-                .count()
-                .agg(F.mean("count").alias("mean"))
-                .select("mean")
-                .first()[0]
-            )
-            # 1000 times is big enough to maintain result of stratified sampling
-            reduced_pool_size = 1000 * num_negative_samples
-            sampling_fraction = reduced_pool_size / mean_possible_samples_per_day
-            if sampling_fraction < 1:
-                neg_interact_df = neg_interact_df.sample(
-                    fraction=sampling_fraction, seed=40
-                )
-            # draw (num_negative_samples) sample
-            # for each user-date pair from smaller pool
-            neg_interact_df = neg_interact_df.withColumn(
-                "random_group", F.floor(F.rand(seed=42) * num_negative_samples)
-            ).withColumn("random_selection", F.rand(seed=41))
-            neg_interact_df = (
-                neg_interact_df.groupby(
-                    [
-                        "user_id",
-                        "username",
-                        "profile_id",
-                        "filename_date",
-                        "is_vod_content",
-                        "random_group",
-                    ]
-                ).agg(F.max_by("item_id", "random_selection").alias("item_id"))
-            ).drop("random_group", "random_selection")
-            neg_interact_df = neg_interact_df.withColumn(
-                "content_type", F.split(F.col("item_id"), "#", 2)[0]
-            ).withColumn("content_id", F.split(F.col("item_id"), "#", 2)[1])
-            neg_interact_df = neg_interact_df.withColumn(
-                "date_time",
-                F.to_date(F.col("filename_date").cast("string"), "yyyyMMdd"),
-            ).withColumn("duration", F.lit(0))
-        return neg_interact_df
+    # def _negative_sample(self, big_df):
+    #     negative_sample_ratio = 12
+    #     if self.process_lib == "pandas":
+    #         mean_samples_per_day = (
+    #             big_df.groupby(
+    #                 [
+    #                     "user_id",
+    #                     "username",
+    #                     "profile_id",
+    #                     "is_vod_content",
+    #                     "filename_date",
+    #                 ]
+    #             )["item_id"]
+    #             .count()
+    #             .mean()
+    #         )
+    #         negative_samples_per_day = int(mean_samples_per_day * negative_sample_ratio)
+    #         item_df = big_df[
+    #             [
+    #                 "item_id",
+    #                 "content_id",
+    #                 "content_type",
+    #                 "filename_date",
+    #                 "is_vod_content",
+    #             ]
+    #         ].drop_duplicates()
+    #         user_df = big_df[
+    #             ["user_id", "username", "profile_id", "filename_date"]
+    #         ].drop_duplicates()
+    #         neg_interact_df = self._negative_sample_each_day(
+    #             user_df, item_df, negative_samples_per_day, big_df
+    #         )
+    #         neg_interact_df = neg_interact_df[big_df.columns]
+    #         result_df = pd.concat([big_df, neg_interact_df], ignore_index=True)
+    #     else:
+    #         mean_samples_per_day = (
+    #             big_df.groupby(["user_id", "username", "profile_id", "filename_date"])
+    #             .agg(F.count("item_id").alias("count"))
+    #             .agg(F.mean("count").alias("mean"))
+    #             .select("mean")
+    #             .first()[0]
+    #         )
+    #         negative_samples_per_day = int(mean_samples_per_day * negative_sample_ratio)
+    #         item_df = big_df.select(
+    #             "item_id",
+    #             "content_id",
+    #             "content_type",
+    #             "filename_date",
+    #             "is_vod_content",
+    #         ).dropDuplicates()
+    #         user_df = big_df.select(
+    #             "user_id", "username", "profile_id", "filename_date"
+    #         ).dropDuplicates()
+    #         neg_interact_df = self._negative_sample_each_day(
+    #             user_df, item_df, negative_samples_per_day, big_df
+    #         )
+    #         neg_interact_df = neg_interact_df.select(big_df.columns)
+    #         result_df = big_df.union(neg_interact_df)
+    #     return result_df
+    #
+    # def _negative_sample_each_day(
+    #     self,
+    #     user_df: Union[pd.DataFrame, DataFrame],
+    #     item_df: Union[pd.DataFrame, DataFrame],
+    #     num_negative_samples: int,
+    #     big_df: Union[pd.DataFrame, DataFrame],
+    # ) -> Union[pd.DataFrame, DataFrame]:
+    #     if self.process_lib == "pandas":
+    #         assert isinstance(user_df, pd.DataFrame)
+    #         assert isinstance(item_df, pd.DataFrame)
+    #         user_df = user_df.set_index("filename_date")
+    #         item_df = item_df.set_index("filename_date")
+    #         filename_dates = user_df.index.unique()
+    #         date_batch_size = 5
+    #         filename_dates_batches = split_batches(filename_dates, date_batch_size)
+    #         neg_interact_dfs = []
+    #         for filename_date in tqdm(filename_dates_batches):
+    #             sub_user_df = user_df.loc[filename_date].reset_index()
+    #             sub_item_df = item_df.loc[filename_date].reset_index()
+    #             neg_interact_df = sub_user_df.merge(
+    #                 sub_item_df, how="inner", on="filename_date"
+    #             )
+    #             neg_interact_df = neg_interact_df.groupby(
+    #                 [
+    #                     "user_id",
+    #                     "username",
+    #                     "profile_id",
+    #                     "filename_date",
+    #                     "is_vod_content",
+    #                 ],
+    #                 as_index=False,
+    #             ).sample(n=num_negative_samples, random_state=42, replace=True)
+    #             neg_interact_df = neg_interact_df.drop_duplicates()
+    #             neg_interact_df["duration"] = 0
+    #             neg_interact_df["date_time"] = pd.to_datetime(
+    #                 neg_interact_df["filename_date"], format=conf.FILENAME_DATE_FORMAT
+    #             )
+    #             neg_interact_dfs.append(neg_interact_df)
+    #         neg_interact_df = pd.concat(neg_interact_dfs, ignore_index=True)
+    #     else:
+    #         neg_interact_df = user_df.join(item_df, on="filename_date", how="inner")
+    #         # global sampling to reduce sampling pool
+    #         # before perform stratified sampling
+    #         mean_possible_samples_per_day = (
+    #             big_df.groupby(["filename_date"])
+    #             .count()
+    #             .agg(F.mean("count").alias("mean"))
+    #             .select("mean")
+    #             .first()[0]
+    #         )
+    #         # 1000 times is big enough to maintain result of stratified sampling
+    #         reduced_pool_size = 1000 * num_negative_samples
+    #         sampling_fraction = reduced_pool_size / mean_possible_samples_per_day
+    #         if sampling_fraction < 1:
+    #             neg_interact_df = neg_interact_df.sample(
+    #                 fraction=sampling_fraction, seed=40
+    #             )
+    #         # draw (num_negative_samples) sample
+    #         # for each user-date pair from smaller pool
+    #         neg_interact_df = neg_interact_df.withColumn(
+    #             "random_group", F.floor(F.rand(seed=42) * num_negative_samples)
+    #         ).withColumn("random_selection", F.rand(seed=41))
+    #         neg_interact_df = (
+    #             neg_interact_df.groupby(
+    #                 [
+    #                     "user_id",
+    #                     "username",
+    #                     "profile_id",
+    #                     "filename_date",
+    #                     "is_vod_content",
+    #                     "random_group",
+    #                 ]
+    #             ).agg(F.max_by("item_id", "random_selection").alias("item_id"))
+    #         ).drop("random_group", "random_selection")
+    #         neg_interact_df = neg_interact_df.withColumn(
+    #             "content_type", F.split(F.col("item_id"), "#", 2)[0]
+    #         ).withColumn("content_id", F.split(F.col("item_id"), "#", 2)[1])
+    #         neg_interact_df = neg_interact_df.withColumn(
+    #             "date_time",
+    #             F.to_date(F.col("filename_date").cast("string"), "yyyyMMdd"),
+    #         ).withColumn("duration", F.lit(0))
+    #     return neg_interact_df
 
     def preprocess_feature(self, df):
         if self.process_lib in ["pandas"]:
@@ -320,8 +422,8 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
                 "is_interacted",
             ] = 0
             df.loc[df["duration"] == 0, "is_interacted"] = 1
+            df.drop("username", axis=1)
         else:
-            df = df.withColumn("is_interacted", F.lit(2))
             df = df.withColumn(
                 "is_interacted",
                 F.when(
@@ -334,12 +436,8 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
                         & ~F.col("is_vod_content")
                     ),
                     F.lit(0),
-                ).otherwise(F.col("is_interacted")),
-            )
-            df = df.withColumn(
-                "is_interacted",
-                F.when(F.col("duration") == 0, F.lit(1)).otherwise(
-                    F.col("is_interacted")
-                ),
+                )
+                .when(F.col("duration") == 0, F.lit(1))
+                .otherwise(F.lit(2)),
             )
         return df

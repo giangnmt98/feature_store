@@ -247,6 +247,7 @@ class BaseFeaturePreprocessing(ABC):
         logger.info(f"Start preprocess features to {self.save_path}")
         self.read_processed_data()
         df = self.initialize_dataframe()
+        logger.info(f"Start preprocess features to {self.save_path}")
         df = self.preprocess_feature(df)
         self.save_preprocessed_data(df)
 

@@ -59,3 +59,4 @@ if __name__ == "__main__":
         # Terminate any running Spark-related processes to clean up resources after execution.
         print("Kill spark process")
         os.system("pkill -f spark")
+        os.system("rm vnpt_feathr-0.0.1.jar")
