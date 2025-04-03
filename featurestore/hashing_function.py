@@ -140,7 +140,9 @@ class HashingClass(metaclass=SingletonMeta):
             after_length = len(df)
 
         elif process_lib == "pyspark":
-            before_length = df.count()
+            before_length = df.rdd.mapPartitions(
+                lambda partition: [sum(1 for _ in partition)]
+            ).sum()
             if version in [0, 1]:
                 df = df.withColumn(
                     "tmp",
@@ -175,7 +177,9 @@ class HashingClass(metaclass=SingletonMeta):
                         F.col(output_feature)
                     ),
                 ).drop("cond")
-            after_length = df.count()
+            after_length = df.rdd.mapPartitions(
+                lambda partition: [sum(1 for _ in partition)]
+            ).sum()
         assert (
             before_length == after_length
         ), f"different length {before_length} {after_length}"

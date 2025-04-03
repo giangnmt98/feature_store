@@ -159,7 +159,7 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
             logger.info("Negative sampling.")
             big_df = self._negative_sample(big_df)
             big_df.persist(storageLevel=StorageLevel.MEMORY_ONLY)
-            big_df = big_df.checkpoint()
+            # big_df = big_df.checkpoint()
         logger.info("Negative sampling...done!")
         return big_df
 

@@ -26,6 +26,7 @@ def load_parquet_data_by_pyspark(
     filters: Optional[List[Any]] = None,
     spark: Optional[Any] = None,
     schema: Optional[Any] = None,
+    opt_process=True,
 ):
     """
     Loads Parquet data using PySpark with optional column selection, filters, and schema
@@ -44,38 +45,70 @@ def load_parquet_data_by_pyspark(
     Returns:
         pyspark.sql.DataFrame: A PySpark DataFrame.
     """
-    assert spark is not None
-    if isinstance(file_paths, list):
-        spark_filenames = [
-            item.as_posix() if isinstance(item, Path) else item for item in file_paths
+    if opt_process and filters is not None:
+        from pyspark.sql.functions import regexp_extract
+
+        df = None
+        partition_column = filters[0][0]
+        partition_values = filters[0][2]
+        paths = [
+            f"{file_paths}/{partition_column}={value}"
+            for value in partition_values
+            if Path(f"{file_paths}/{partition_column}={value}").exists()
         ]
-        if schema:
-            df = spark.read.schema(schema).parquet(*spark_filenames)
-        else:
-            df = spark.read.parquet(*spark_filenames)
-        if with_columns is not None:
-            df = df.select(with_columns)
-        if filters is None:
-            return df
-    else:
-        file_paths = (
-            file_paths.as_posix() if isinstance(file_paths, Path) else file_paths
-        )
-        if schema:
+        # Đọc dữ liệu từ những đường dẫn này
+        if with_columns is None:
             df = (
-                spark.read.option("mergeSchema", "true")
-                .schema(schema)
-                .parquet(file_paths)
+                spark.read.parquet(*paths)
+                .withColumn(
+                    partition_column,
+                    regexp_extract(
+                        F.input_file_name(), f"{partition_column}=(\\d+)", 1
+                    ),
+                )
+                .select(with_columns)
             )
         else:
-            df = spark.read.option("mergeSchema", "true").parquet(file_paths)
-        if with_columns is not None:
-            df = df.select(with_columns)
+            df = spark.read.parquet(*paths).withColumn(
+                partition_column,
+                regexp_extract(F.input_file_name(), f"{partition_column}=(\\d+)", 1),
+            )
+        return df
+    else:
+        assert spark is not None
+        if isinstance(file_paths, list):
+            spark_filenames = [
+                item.as_posix() if isinstance(item, Path) else item
+                for item in file_paths
+            ]
+            if schema:
+                df = spark.read.schema(schema).parquet(*spark_filenames)
+            else:
+                df = spark.read.parquet(*spark_filenames)
+            if with_columns is not None:
+                df = df.select(with_columns)
+            if filters is None:
+                return df
+        else:
+            file_paths = (
+                file_paths.as_posix() if isinstance(file_paths, Path) else file_paths
+            )
+            if schema:
+                df = (
+                    spark.read.option("mergeSchema", "true")
+                    .schema(schema)
+                    .parquet(file_paths)
+                )
+            else:
+                df = spark.read.option("mergeSchema", "true").parquet(file_paths)
 
-        if filters is None:
-            return df
+            if with_columns is not None:
+                df = df.select(with_columns)
 
-    return filters_by_expression_in_pyspark(df, filters)
+            if filters is None:
+                return df
+
+        return df
 
 
 def __convert_pyarrowschema_to_pandasschema(p, is_pass_null=False):

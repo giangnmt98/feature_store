@@ -1,20 +1,24 @@
+#infer_date: "20250202"
+#raw_data_path:  /mnt/h/Mytv/data/processed_data
 infer_date: "20230430"
-raw_data_path: /home/giang/Desktop/data/processed/
+raw_data_path:  ./data2/processed
 feathr_workspace_folder: configs/feathr_config.yaml
 feature_registry_config_path: configs/feature_registry_config.yaml
 training_pipeline_config_path: configs/training_pipeline_config.yaml
 materialize_pipeline_config_path: configs/materialize_pipeline_config.yaml
 infer_pipeline_config_path: configs/infer_pipeline_config.yaml
-feathr_jar_path: /home/giang/Desktop/vnpt_feathr-0.0.1.jar
+feathr_jar_path: /home/giang/VNPTAI/feathr_core/build/libs/vnpt_feathr-0.0.1.jar
 process_lib: pyspark
+job_retry: 3
+job_retry_sec: 180
 spark_config:
   name: "spark-application"  # Tên Spark Application
   master: "local[*]"         # Chế độ chạy Spark, thay thế * bằng số cores cụ thể nếu cần
   params:
-    driver_memory: "8g"      # Bộ nhớ của driver (điều chỉnh phù hợp)
-    executor_memory: "8g"    # Bộ nhớ của executor (điều chỉnh phù hợp)
-    num_cores: 4             # Số lượng cores sử dụng
-    sql_shuffle_partitions: 4 # Số lượng partition khi shuffle
+    driver_memory: "20g"      # Bộ nhớ của driver (điều chỉnh phù hợp)
+    executor_memory: "20g"    # Bộ nhớ của executor (điều chỉnh phù hợp)
+    num_cores: 24             # Số lượng cores sử dụng
+    sql_shuffle_partitions: 32 # Số lượng partition khi shuffle
     auto_broadcast_join_threshold: 10485760 # Ngưỡng kích thước tối đa để tự động broadcast join (byte)
     checkpoint_dir: "/tmp" # Đường dẫn thư mục checkpoint
-    maxResultSize: "100g"
+    maxResultSize: "5G"
