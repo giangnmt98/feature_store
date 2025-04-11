@@ -128,16 +128,21 @@ class OnlineItemFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
 
             # Xử lý rank dựa trên số lượng và xác định Group
             window_spec = Window.partitionBy("end_date").orderBy(F.col("count").desc())
-
+            # "others": "0"
+            # "100": "1"
+            # "101-300": "2"
+            # "301-1000": "3"
+            # "1001-2000": "4"
+            # ">2000": "5"
             result_df = (
                 count_df.withColumn("row", F.row_number().over(window_spec))
                 .withColumn(
                     "popularity_item_group",
-                    F.when(F.col("row") <= 100, F.lit("100"))
-                    .when(F.col("row") <= 300, F.lit("101-300"))
-                    .when(F.col("row") <= 1000, F.lit("301-1000"))
-                    .when(F.col("row") <= 2000, F.lit("1001-2000"))
-                    .otherwise(F.lit(">2000")),
+                    F.when(F.col("row") <= 100, F.lit(1))
+                    .when(F.col("row") <= 300, F.lit(2))
+                    .when(F.col("row") <= 1000, F.lit(3))
+                    .when(F.col("row") <= 2000, F.lit(4))
+                    .otherwise(F.lit(5)),
                 )
                 .drop("row")
             )
@@ -150,11 +155,10 @@ class OnlineItemFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
             result_df = result_df.join(filename_date_count, ["end_date"], "left")
             result_df = result_df.withColumn(
                 "popularity_item_group",
-                F.when(F.col("day_count") < 15, F.lit("others")).otherwise(
+                F.when(F.col("day_count") < 15, F.lit(0)).otherwise(
                     F.col("popularity_item_group")
                 ),
             )
-
             # Thêm các cột ngày tháng
             popular_item_group = result_df.withColumn(
                 "date_time", F.to_date(F.col("end_date").cast(StringType()), "yyyyMMdd")
@@ -267,23 +271,31 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
         return user_prefer_type
 
     def preprocess_feature_by_pyspark(self, big_df):
-        """
-        Optimized version of the preprocess_feature_by_pyspark function.
-        """
-        # Lọc dữ liệu và loại bỏ các dòng trùng lặp
-        big_df = big_df.filter(
-            F.col("content_type").cast(StringType()) != "31"
-        ).distinct()
-
-        # Gắn cột mới xác định "movie" hoặc "vod"
+        # Ép kiểu dữ liệu content_type trước khi filter để tránh ép kiểu nhiều lần
         big_df = big_df.withColumn(
-            "movie_or_vod",
-            F.when(
-                F.col("content_type").isin(conf.MOVIE_TYPE_GROUP), F.lit("movie")
-            ).otherwise(F.lit("vod")),
+            "content_type_str", F.col("content_type").cast("string")
         )
 
-        # Tạo danh sách các ngày xử lý
+        # Cache DataFrame sau khi lọc và distinct để tái sử dụng
+        filtered_df = big_df.filter(F.col("content_type_str") != "31").distinct()
+
+        # Chuyển đổi các giá trị MOVIE_TYPE_GROUP thành broadcast set để tối ưu join
+        movie_types = self.spark.sparkContext.broadcast(set(conf.MOVIE_TYPE_GROUP))
+
+        # Sử dụng UDF để xác định movie_or_vod, giảm chi phí kiểm tra isin()
+        def determine_type(content_type):
+            if content_type in movie_types.value:
+                return "movie"
+            return "vod"
+
+        determine_type_udf = F.udf(determine_type, StringType())
+
+        # Áp dụng UDF và chỉ chọn các cột cần thiết để giảm kích thước dữ liệu
+        typed_df = filtered_df.withColumn(
+            "movie_or_vod", determine_type_udf("content_type")
+        ).select("user_id", "content_type", "filename_date", "movie_or_vod")
+
+        # Tính toán date_ranges một lần và broadcast
         date_ranges = [
             (
                 p_date,
@@ -294,20 +306,28 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
             for p_date in self.dates_to_extract
         ]
 
-        # Tạo DataFrame chứa khoảng thời gian xử lý
+        # Tạo DataFrame cho date_ranges
         date_df = self.spark.createDataFrame(date_ranges, ["end_date", "begin_date"])
 
-        # Thực hiện phép gia nhập dữ liệu với khoảng thời gian
-        user_prefer_type = big_df.crossJoin(date_df).filter(
-            (big_df.filename_date <= F.col("end_date"))
-            & (big_df.filename_date > F.col("begin_date"))
+        # Sử dụng broadcast join thay vì crossJoin để cải thiện hiệu suất
+        # Điều này khả thi vì date_df thường có kích thước nhỏ
+        user_prefer_type = typed_df.join(
+            F.broadcast(date_df),
+            (typed_df.filename_date <= F.col("end_date"))
+            & (typed_df.filename_date > F.col("begin_date")),
         )
 
-        # Kiểm tra điều kiện số ngày và xử lý sở thích
+        # Sử dụng cache cho dữ liệu trung gian trước khi thực hiện các phép tính toán phức tạp
+        user_prefer_type = user_prefer_type.cache()
+
+        # Nhóm và tổng hợp dữ liệu
+        user_prefer_type = user_prefer_type.groupBy(
+            "user_id", "movie_or_vod", "end_date"
+        ).agg(F.count("content_type").alias("prefer_count"))
+
+        # Sử dụng pivot để tạo các cột movie và vod
         user_prefer_type = (
-            user_prefer_type.groupBy("user_id", "movie_or_vod", "end_date")
-            .agg(F.count("content_type").alias("prefer_count"))
-            .groupBy("user_id", "end_date")
+            user_prefer_type.groupBy("user_id", "end_date")
             .pivot("movie_or_vod", ["movie", "vod"])
             .agg(F.first("prefer_count"))
             .fillna(0)
@@ -315,11 +335,17 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
             .withColumnRenamed("vod", "prefer_vod_type")
         )
 
-        # Thêm các cột ngày tháng
+        # Chuyển đổi kiểu dữ liệu cho cột date_time
         user_prefer_type = user_prefer_type.withColumn(
-            "date_time", F.to_date(F.col("end_date").cast(StringType()), "yyyyMMdd")
+            "date_time", F.to_date(F.col("end_date"), "yyyyMMdd")
         )
+
+        # Đổi tên cột cuối cùng
         user_prefer_type = user_prefer_type.withColumnRenamed(
             "end_date", "filename_date"
         )
+
+        # Giải phóng bộ nhớ
+        user_prefer_type.unpersist()
+
         return user_prefer_type

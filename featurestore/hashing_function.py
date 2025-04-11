@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyspark.sql.functions as F
-from pyspark.sql.types import LongType, StringType
+from pyspark.sql.types import BooleanType, LongType, StringType
 
 from featurestore.base.utils.singleton import SingletonMeta
 
@@ -77,6 +77,7 @@ class HashingClass(metaclass=SingletonMeta):
         hash_bucket_size,
         process_lib,
         version=0,
+        is_dev_env=False,
     ):
         """
         Hashes column values into a bucketed hash space while handling collisions.
@@ -140,47 +141,107 @@ class HashingClass(metaclass=SingletonMeta):
             after_length = len(df)
 
         elif process_lib == "pyspark":
-            before_length = df.rdd.mapPartitions(
-                lambda partition: [sum(1 for _ in partition)]
-            ).sum()
-            if version in [0, 1]:
-                df = df.withColumn(
-                    "tmp",
-                    F.md5(F.col(dependency_col)).substr(1, 15),
-                )
+            #     before_length = df.count()
+            #
+            #     if version in [0, 1]:
+            #         df = df.withColumn(
+            #             "tmp",
+            #             F.md5(F.col(dependency_col)).substr(1, 15),
+            #         )
+            #
+            #     elif version == 2:
+            #         df = df.withColumn(
+            #             "tmp",
+            #             F.md5(F.col(dependency_col)).substr(18, 15),
+            #         )
+            #
+            #     df = df.withColumn(
+            #         output_feature,
+            #         F.conv(F.col("tmp"), 16, 10).cast(LongType()) % hash_bucket_size,
+            #     ).drop("tmp")
+            #
+            #     if rehash_id != [] and version != 0:
+            #         collision_df = (
+            #             df.sparkSession.createDataFrame(rehash_id, StringType())
+            #             .withColumnRenamed("value", dependency_col)
+            #             .drop_duplicates()
+            #         )
+            #         collision_df = collision_df.withColumn("cond", F.lit("1"))
+            #         df = df.join(collision_df, on=dependency_col, how="left").na.fill(
+            #             {"cond": "0"}
+            #         )
+            #
+            #         df = df.withColumn(
+            #             output_feature,
+            #             F.when(F.col("cond") == cond_str, cond_fill).otherwise(
+            #                 F.col(output_feature)
+            #             ),
+            #         ).drop("cond")
+            #     after_length = df.count()
+            # assert (
+            #     before_length == after_length
+            # ), f"different length {before_length} {after_length}"
+            if is_dev_env:
+                before_length = df.count()
 
-            elif version == 2:
-                df = df.withColumn(
-                    "tmp",
-                    F.md5(F.col(dependency_col)).substr(18, 15),
-                )
+            # Xử lý logic hashing dựa vào version
+            md5_expr = (
+                F.md5(F.col(dependency_col)).substr(1, 15)
+                if version in [0, 1]
+                else F.md5(F.col(dependency_col)).substr(18, 15)
+            )
 
+            # Thực hiện tất cả các biến đổi trong một bước
             df = df.withColumn(
                 output_feature,
-                F.conv(F.col("tmp"), 16, 10).cast(LongType()) % hash_bucket_size,
-            ).drop("tmp")
+                F.conv(md5_expr, 16, 10).cast(LongType()) % hash_bucket_size,
+            )
 
-            if rehash_id != [] and version != 0:
-                collision_df = (
-                    df.sparkSession.createDataFrame(rehash_id, StringType())
-                    .withColumnRenamed("value", dependency_col)
-                    .drop_duplicates()
-                )
-                collision_df = collision_df.withColumn("cond", F.lit("1"))
-                df = df.join(collision_df, on=dependency_col, how="left").na.fill(
-                    {"cond": "0"}
-                )
+            # Xử lý các va chạm (rehash_id) nếu cần
+            if rehash_id and version != 0:
+                # Tối ưu bằng việc sử dụng broadcast để tránh shuffle
+                if len(rehash_id) < 10000:  # Chỉ sử dụng broadcast với dữ liệu nhỏ
+                    rehash_set = set(rehash_id)
+                    rehash_broadcast = df.sparkSession.sparkContext.broadcast(
+                        rehash_set
+                    )
 
-                df = df.withColumn(
-                    output_feature,
-                    F.when(F.col("cond") == cond_str, cond_fill).otherwise(
-                        F.col(output_feature)
-                    ),
-                ).drop("cond")
-            after_length = df.rdd.mapPartitions(
-                lambda partition: [sum(1 for _ in partition)]
-            ).sum()
-        assert (
-            before_length == after_length
-        ), f"different length {before_length} {after_length}"
+                    @F.udf(BooleanType())
+                    def is_rehash_id(value):
+                        return value in rehash_broadcast.value
+
+                    df = df.withColumn(
+                        output_feature,
+                        F.when(
+                            is_rehash_id(F.col(dependency_col)), cond_fill
+                        ).otherwise(F.col(output_feature)),
+                    )
+                else:
+                    # Với dữ liệu lớn, sử dụng broadcast join
+                    collision_df = (
+                        df.sparkSession.createDataFrame(rehash_id, StringType())
+                        .withColumnRenamed("value", dependency_col)
+                        .drop_duplicates()
+                    )
+
+                    # Áp dụng broadcast join để tối ưu hóa
+                    from pyspark.sql.functions import broadcast
+
+                    df = df.join(
+                        broadcast(collision_df), on=dependency_col, how="left"
+                    ).withColumn(
+                        output_feature,
+                        F.when(F.col(dependency_col).isNotNull(), cond_fill).otherwise(
+                            F.col(output_feature)
+                        ),
+                    )
+
+            # Kiểm tra độ dài chỉ trong môi trường phát triển
+            if is_dev_env:
+                after_length = df.count()
+                if before_length != after_length:
+                    logger.warning(
+                        f"Số lượng bản ghi thay đổi: từ {before_length} thành {after_length}"
+                    )
+
         return df

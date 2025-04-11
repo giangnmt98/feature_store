@@ -431,9 +431,21 @@ def save_parquet_data_by_pyspark(
         spark = SparkOperations().get_spark_session()
         df = spark.createDataFrame(df.select(schema.names).rdd, schema)
 
+    # Cấu hình Spark để tối ưu
+    spark = df.sparkSession
+    spark.conf.set("spark.sql.shuffle.partitions", "200")
+    spark.conf.set("spark.default.parallelism", "200")
+    spark.conf.set("spark.sql.files.maxRecordsPerFile", "1000000")
+
+    # Tối ưu bằng cách kích hoạt adaptive query execution
+    spark.conf.set("spark.sql.adaptive.enabled", "true")
+
+    # Cấu hình cho toàn bộ dataframe
     if partition_cols is None:
-        df.write.option("header", True).mode(mode).parquet(to_save_path)
+        df.write.option("header", True).option("compression", "snappy").mode(
+            mode
+        ).parquet(to_save_path)
     else:
-        df.write.option("header", True).partitionBy(partition_cols).mode(mode).parquet(
-            to_save_path
-        )
+        df.write.option("header", True).option("compression", "snappy").partitionBy(
+            partition_cols
+        ).mode(mode).parquet(to_save_path)

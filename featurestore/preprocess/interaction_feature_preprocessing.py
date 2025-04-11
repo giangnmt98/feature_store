@@ -102,6 +102,14 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
             )
             big_df = movie_df.union(vod_df)
 
+            # Convert column types to int
+
+            big_df = big_df.withColumn("profile_id", F.col("profile_id").cast("int"))
+            big_df = big_df.withColumn("content_id", F.col("content_id").cast("int"))
+            big_df = big_df.withColumn(
+                "content_type", F.col("content_type").cast("int")
+            )
+
         big_df = self.create_user_key(big_df)
         big_df = self.create_item_key(big_df)
 
@@ -115,7 +123,6 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
                 [
                     "user_id",
                     "item_id",
-                    "username",
                     "profile_id",
                     "content_id",
                     "content_type",
@@ -142,7 +149,6 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
             big_df = big_df.groupBy(
                 "user_id",
                 "item_id",
-                "username",
                 "profile_id",
                 "content_id",
                 "content_type",
@@ -158,7 +164,8 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
             # negative sampling
             logger.info("Negative sampling.")
             big_df = self._negative_sample(big_df)
-            big_df.persist(storageLevel=StorageLevel.MEMORY_ONLY)
+            big_df.persist(storageLevel=StorageLevel.MEMORY_AND_DISK)
+            # print("XXXXXXXXXXXXXXX", big_df.count())
             # big_df = big_df.checkpoint()
         logger.info("Negative sampling...done!")
         return big_df
@@ -170,7 +177,6 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
                 big_df.groupby(
                     [
                         "user_id",
-                        "username",
                         "profile_id",
                         "is_vod_content",
                         "filename_date",
@@ -190,7 +196,7 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
                 ]
             ].drop_duplicates()
             user_df = big_df[
-                ["user_id", "username", "profile_id", "filename_date"]
+                ["user_id", "profile_id", "filename_date"]
             ].drop_duplicates()
             neg_interact_df = self._negative_sample_each_day(
                 user_df, item_df, negative_samples_per_day, big_df
@@ -199,7 +205,7 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
             result_df = pd.concat([big_df, neg_interact_df], ignore_index=True)
         else:
             mean_samples_per_day = (
-                big_df.groupby(["user_id", "username", "profile_id", "filename_date"])
+                big_df.groupby(["user_id", "profile_id", "filename_date"])
                 .agg(F.count("item_id").alias("count"))
                 .agg(F.mean("count").alias("mean"))
                 .select("mean")
@@ -214,7 +220,7 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
                 "is_vod_content",
             ).dropDuplicates()
             user_df = big_df.select(
-                "user_id", "username", "profile_id", "filename_date"
+                "user_id", "profile_id", "filename_date"
             ).dropDuplicates()
             neg_interact_df = self._negative_sample_each_day(
                 user_df, item_df, negative_samples_per_day, big_df
@@ -248,7 +254,7 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
                 neg_interact_df = neg_interact_df.groupby(
                     [
                         "user_id",
-                        "username",
+                        # "username",
                         "profile_id",
                         "filename_date",
                         "is_vod_content",
@@ -263,9 +269,9 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
                 neg_interact_dfs.append(neg_interact_df)
             neg_interact_df = pd.concat(neg_interact_dfs, ignore_index=True)
         else:
-            neg_interact_df = user_df.join(item_df, on="filename_date", how="inner")
-            # global sampling to reduce sampling pool
-            # before perform stratified sampling
+            neg_interact_df = user_df.join(
+                item_df, on="filename_date", how="inner"
+            ).persist()
             mean_possible_samples_per_day = (
                 big_df.groupby(["filename_date"])
                 .count()
@@ -280,30 +286,33 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
                 neg_interact_df = neg_interact_df.sample(
                     fraction=sampling_fraction, seed=40
                 )
-            # draw (num_negative_samples) sample
-            # for each user-date pair from smaller pool
+            # Gộp các phép biến đổi có thể thực hiện cùng lúc
             neg_interact_df = neg_interact_df.withColumn(
                 "random_group", F.floor(F.rand(seed=42) * num_negative_samples)
             ).withColumn("random_selection", F.rand(seed=41))
+            # Repartition trước khi groupby để giảm thiểu chi phí shuffle
+            partition_cols = ["user_id", "filename_date"]
+            neg_interact_df = neg_interact_df.repartition(*partition_cols)
             neg_interact_df = (
                 neg_interact_df.groupby(
                     [
                         "user_id",
-                        "username",
                         "profile_id",
                         "filename_date",
                         "is_vod_content",
                         "random_group",
                     ]
-                ).agg(F.max_by("item_id", "random_selection").alias("item_id"))
-            ).drop("random_group", "random_selection")
-            neg_interact_df = neg_interact_df.withColumn(
-                "content_type", F.split(F.col("item_id"), "#", 2)[0]
-            ).withColumn("content_id", F.split(F.col("item_id"), "#", 2)[1])
-            neg_interact_df = neg_interact_df.withColumn(
-                "date_time",
-                F.to_date(F.col("filename_date").cast("string"), "yyyyMMdd"),
-            ).withColumn("duration", F.lit(0))
+                )
+                .agg(F.max_by("item_id", "random_selection").alias("item_id"))
+                .drop("random_group", "random_selection")
+                .withColumn("content_type", F.split(F.col("item_id"), "#", 2)[0])
+                .withColumn("content_id", F.split(F.col("item_id"), "#", 2)[1])
+                .withColumn(
+                    "date_time",
+                    F.to_date(F.col("filename_date").cast("string"), "yyyyMMdd"),
+                )
+                .withColumn("duration", F.lit(0))
+            )
         return neg_interact_df
 
     def preprocess_feature(self, df):
