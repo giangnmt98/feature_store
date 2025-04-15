@@ -16,6 +16,7 @@ import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 import pyspark.sql.functions as F
 from pyspark.sql import DataFrame
+from pyspark.sql.functions import regexp_extract
 
 from featurestore.base.utils.spark import SparkOperations
 
@@ -46,9 +47,6 @@ def load_parquet_data_by_pyspark(
         pyspark.sql.DataFrame: A PySpark DataFrame.
     """
     if opt_process and filters is not None:
-        from pyspark.sql.functions import regexp_extract
-
-        df = None
         partition_column = filters[0][0]
         partition_values = filters[0][2]
         paths = [

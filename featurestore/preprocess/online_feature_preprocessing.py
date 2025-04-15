@@ -8,7 +8,7 @@ and label features in real-time or near-real-time environments.
 
 import pandas as pd
 import pyspark.sql.functions as F
-from pyspark.sql.types import StringType, StructType
+from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
 
 from configs import conf
@@ -271,6 +271,18 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
         return user_prefer_type
 
     def preprocess_feature_by_pyspark(self, big_df):
+        """
+        Processes user-related data using PySpark to compute feature preferences.
+
+        Args:
+            big_df: Input PySpark DataFrame containing user
+                interaction data (user_id, content_type, filename_date).
+
+        Returns:
+            pyspark.sql.DataFrame: A PySpark DataFrame containing preprocessed user
+                preferences.
+        """
+
         # Ép kiểu dữ liệu content_type trước khi filter để tránh ép kiểu nhiều lần
         big_df = big_df.withColumn(
             "content_type_str", F.col("content_type").cast("string")
@@ -317,7 +329,8 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
             & (typed_df.filename_date > F.col("begin_date")),
         )
 
-        # Sử dụng cache cho dữ liệu trung gian trước khi thực hiện các phép tính toán phức tạp
+        # Sử dụng cache cho dữ liệu trung gian
+        # trước khi thực hiện các phép tính toán phức tạp
         user_prefer_type = user_prefer_type.cache()
 
         # Nhóm và tổng hợp dữ liệu

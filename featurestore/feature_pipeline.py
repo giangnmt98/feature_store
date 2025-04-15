@@ -62,7 +62,7 @@ class FeaturePipeline:
         infer_pipeline_config_path: str = "",
         user_id_df=pd.DataFrame(),
         process_lib: str = "pandas",
-        spark_config: dict = None,
+        spark_config=None,
         job_retry: int = 10,
         job_retry_sec: int = 60,
     ):
@@ -99,9 +99,11 @@ class FeaturePipeline:
         ContentFeaturePreprocessing(
             self.process_lib, self.raw_data_path, spark_config=self.spark_config
         ).run()
+
         InteractedFeaturePreprocessing(
             self.process_lib, self.raw_data_path, spark_config=self.spark_config
-        ).run()
+        ).run(is_save=False)
+
         OnlineItemFeaturePreprocessing(
             self.process_lib, self.raw_data_path, spark_config=self.spark_config
         ).run()

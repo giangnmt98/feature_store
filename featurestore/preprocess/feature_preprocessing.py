@@ -133,7 +133,7 @@ class AccountFeaturePreprocessing(BaseFeaturePreprocessing):
             )
         return df
 
-    def run(self):
+    def run(self, is_save):
         self.read_processed_data()
         df = self.initialize_dataframe()
         df = self.preprocess_feature(df)
@@ -206,7 +206,7 @@ class ProfileFeaturePreprocessing(BaseFeaturePreprocessing):
         )
         return df
 
-    def run(self):
+    def run(self, is_save=True):
         self.read_processed_data()
         df = self.initialize_dataframe()
         df = self.preprocess_feature(df)
@@ -235,7 +235,7 @@ class UserFeaturePreprocessing(BaseFeaturePreprocessing):
     def read_processed_data(self):
         account_df = AccountFeaturePreprocessing(
             self.process_lib, self.raw_data_dir
-        ).run()
+        ).run(is_save=True)
         profile_df = ProfileFeaturePreprocessing(
             self.process_lib, self.raw_data_dir
         ).run()

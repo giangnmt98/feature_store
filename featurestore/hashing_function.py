@@ -10,8 +10,8 @@ import hashlib
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import pyspark.sql.functions as F
+from pyspark.sql.functions import broadcast
 from pyspark.sql.types import BooleanType, LongType, StringType
 
 from featurestore.base.utils.singleton import SingletonMeta
@@ -102,7 +102,6 @@ class HashingClass(metaclass=SingletonMeta):
         Returns:
             The dataframe with an added column of hashed values.
         """
-        cond_str = ""
         cond_fill = -1
         before_length = after_length = 0
 
@@ -114,73 +113,11 @@ class HashingClass(metaclass=SingletonMeta):
             rehash_id = []
 
         if version in [0, 1]:
-            cond_str = "1"
             cond_fill = hash_bucket_size
         elif version == 2:
-            cond_str = "0"
             cond_fill = 0
 
-        if process_lib == "pandas":
-            before_length = len(df)
-            df[output_feature] = (
-                df[dependency_col]
-                .astype(str)
-                .apply(lambda x: md5_64bit_int_hash(x, version) % hash_bucket_size)
-            )
-
-            if rehash_id != [] and version != 0:
-                collision_df = pd.DataFrame(
-                    rehash_id, columns=[dependency_col]
-                ).drop_duplicates()
-                collision_df["cond"] = "1"
-                df = df.merge(collision_df, on=dependency_col, how="left").fillna(
-                    {"cond": "0"}
-                )
-                df.loc[df["cond"] == cond_str, output_feature] = cond_fill
-                df = df.drop(columns=["cond"])
-            after_length = len(df)
-
-        elif process_lib == "pyspark":
-            #     before_length = df.count()
-            #
-            #     if version in [0, 1]:
-            #         df = df.withColumn(
-            #             "tmp",
-            #             F.md5(F.col(dependency_col)).substr(1, 15),
-            #         )
-            #
-            #     elif version == 2:
-            #         df = df.withColumn(
-            #             "tmp",
-            #             F.md5(F.col(dependency_col)).substr(18, 15),
-            #         )
-            #
-            #     df = df.withColumn(
-            #         output_feature,
-            #         F.conv(F.col("tmp"), 16, 10).cast(LongType()) % hash_bucket_size,
-            #     ).drop("tmp")
-            #
-            #     if rehash_id != [] and version != 0:
-            #         collision_df = (
-            #             df.sparkSession.createDataFrame(rehash_id, StringType())
-            #             .withColumnRenamed("value", dependency_col)
-            #             .drop_duplicates()
-            #         )
-            #         collision_df = collision_df.withColumn("cond", F.lit("1"))
-            #         df = df.join(collision_df, on=dependency_col, how="left").na.fill(
-            #             {"cond": "0"}
-            #         )
-            #
-            #         df = df.withColumn(
-            #             output_feature,
-            #             F.when(F.col("cond") == cond_str, cond_fill).otherwise(
-            #                 F.col(output_feature)
-            #             ),
-            #         ).drop("cond")
-            #     after_length = df.count()
-            # assert (
-            #     before_length == after_length
-            # ), f"different length {before_length} {after_length}"
+        if process_lib == "pyspark":
             if is_dev_env:
                 before_length = df.count()
 
@@ -225,8 +162,6 @@ class HashingClass(metaclass=SingletonMeta):
                     )
 
                     # Áp dụng broadcast join để tối ưu hóa
-                    from pyspark.sql.functions import broadcast
-
                     df = df.join(
                         broadcast(collision_df), on=dependency_col, how="left"
                     ).withColumn(
@@ -240,8 +175,9 @@ class HashingClass(metaclass=SingletonMeta):
             if is_dev_env:
                 after_length = df.count()
                 if before_length != after_length:
-                    logger.warning(
-                        f"Số lượng bản ghi thay đổi: từ {before_length} thành {after_length}"
+                    print(
+                        f"Số lượng bản ghi thay đổi: từ {before_length} "
+                        f"thành {after_length}"
                     )
 
         return df

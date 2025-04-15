@@ -240,15 +240,17 @@ class BaseFeaturePreprocessing(ABC):
             process_lib=self.process_lib,
         )
 
-    def run(self):
+    def run(self, is_save=True):
         """
         Executes the full preprocessing pipeline.
         """
         logger.info(f"Start preprocess features to {self.save_path}")
         self.read_processed_data()
         df = self.initialize_dataframe()
-        df = self.preprocess_feature(df)
-        self.save_preprocessed_data(df)
+        if df is not None:
+            df = self.preprocess_feature(df)
+            if is_save:
+                self.save_preprocessed_data(df)
 
 
 class BaseDailyFeaturePreprocessing(BaseFeaturePreprocessing):
@@ -400,7 +402,7 @@ class BaseDailyFeaturePreprocessing(BaseFeaturePreprocessing):
             overwrite=False,
         )
 
-    def run(self):
+    def run(self, is_save=True):
         """
         Executes the full preprocessing pipeline.
         """
@@ -411,7 +413,7 @@ class BaseDailyFeaturePreprocessing(BaseFeaturePreprocessing):
             return
         else:
             logger.info(f"Loading raw data from date: {self.dates_to_extract}")
-        super().run()
+        super().run(is_save)
 
 
 class BaseOnlineFeaturePreprocessing(BaseDailyFeaturePreprocessing):

@@ -65,7 +65,9 @@ class SparkOperations(metaclass=SingletonMeta):
 
         self.atom = AtomicCounter()
         resource_info = ResourceInfo()
-        base_checkpoint_dir = os.getenv("PREFIX_CHECKPOINT_DIR", "")  # Common logic
+        base_checkpoint_dir = os.getenv(
+            "PREFIX_CHECKPOINT_DIR", "/mnt/h/Mytv/spark_tmp/"
+        )  # Common logic
 
         if spark_config is None:  # Default spark configuration
             default_cpu_factor = 0.7
