@@ -54,7 +54,6 @@ def load_parquet_data_by_pyspark(
             for value in partition_values
             if Path(f"{file_paths}/{partition_column}={value}").exists()
         ]
-        # Đọc dữ liệu từ những đường dẫn này
         if with_columns is None:
             df = (
                 spark.read.parquet(*paths)
@@ -71,42 +70,37 @@ def load_parquet_data_by_pyspark(
                 partition_column,
                 regexp_extract(F.input_file_name(), f"{partition_column}=(\\d+)", 1),
             )
-        return df
     else:
-        assert spark is not None
+
+        def _normalize_path(path):
+            """Chuẩn hóa path thành string."""
+            return path.as_posix() if isinstance(path, Path) else path
+
+        def _create_reader(spark, schema=None, merge_schema=False):
+            """Tạo reader với các cấu hình."""
+            reader = spark.read
+            if schema:
+                reader = reader.schema(schema)
+            if merge_schema:
+                reader = reader.option("mergeSchema", "true")
+            return reader
+
+        # Chuẩn hóa paths
         if isinstance(file_paths, list):
-            spark_filenames = [
-                item.as_posix() if isinstance(item, Path) else item
-                for item in file_paths
-            ]
-            if schema:
-                df = spark.read.schema(schema).parquet(*spark_filenames)
-            else:
-                df = spark.read.parquet(*spark_filenames)
-            if with_columns is not None:
-                df = df.select(with_columns)
-            if filters is None:
-                return df
+            normalized_paths = [_normalize_path(p) for p in file_paths]
+            reader = _create_reader(spark, schema)
+            df = reader.parquet(*normalized_paths)
         else:
-            file_paths = (
-                file_paths.as_posix() if isinstance(file_paths, Path) else file_paths
-            )
-            if schema:
-                df = (
-                    spark.read.option("mergeSchema", "true")
-                    .schema(schema)
-                    .parquet(file_paths)
-                )
-            else:
-                df = spark.read.option("mergeSchema", "true").parquet(file_paths)
+            normalized_path = _normalize_path(file_paths)
+            reader = _create_reader(spark, schema, merge_schema=True)
+            df = reader.parquet(normalized_path)
 
-            if with_columns is not None:
-                df = df.select(with_columns)
+        # Áp dụng các biến đổi
+        if with_columns is not None:
+            df = df.select(with_columns)
 
-            if filters is None:
-                return df
-
-        return df
+        return df if filters is None else df
+    return df
 
 
 def __convert_pyarrowschema_to_pandasschema(p, is_pass_null=False):

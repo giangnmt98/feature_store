@@ -6,10 +6,10 @@ and user-related data. It provides logic to dynamically extract, transform,
 and label features in real-time or near-real-time environments.
 """
 
-import pandas as pd
 import pyspark.sql.functions as F
 from pyspark.sql.types import StringType
 from pyspark.sql.window import Window
+from pyspark.storagelevel import StorageLevel
 
 from configs import conf
 from featurestore.base.feature_preprocessing import BaseOnlineFeaturePreprocessing
@@ -48,124 +48,75 @@ class OnlineItemFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
         )
 
     def preprocess_feature(self, df):
-        if self.process_lib in ["pandas"]:
-            big_df = df[df["content_type"].astype(str) != "31"]
-            big_df = big_df[
-                ["profile_id", "content_id", "content_type", "filename_date"]
-            ].drop_duplicates()
-            big_df = big_df.reset_index(drop=True)
-            big_df["item_id"] = big_df["content_type"] + "#" + big_df["content_id"]
+        big_df = (
+            df.filter(F.col("content_type").cast(StringType()) != "31")
+            .select("profile_id", "item_id", "filename_date")
+            .dropDuplicates()
+        )
 
-            for i, p_date in enumerate(self.dates_to_extract):
-                begin_date = get_date_before(
+        # Tạo dataframe các khoảng thời gian tương ứng để xử lý
+        date_ranges = [
+            (
+                p_date,
+                get_date_before(
                     p_date, num_days_before=conf.ROLLING_PERIOD_FOR_POPULARITY_ITEM
-                )
-                df_small = big_df[
-                    (big_df.filename_date <= p_date)
-                    & (big_df.filename_date > begin_date)
-                ]
-                if df_small["filename_date"].drop_duplicates().count() < 15:
-                    df_small = df_small["item_id"].drop_duplicates().to_frame()
-                    df_small["count"] = 0
-                    df_small["popularity_item_group"] = "others"
-                else:
-                    df_small = df_small.groupby("item_id").size().to_frame("count")
-                    df_small = df_small.sort_values(by=["count"], ascending=False)
-                    df_small = df_small.reset_index().reset_index()
-                    df_small["popularity_item_group"] = ">2000"
-                    df_small.loc[
-                        df_small.index < 2000, "popularity_item_group"
-                    ] = "1001-2000"
-                    df_small.loc[
-                        df_small.index < 1000, "popularity_item_group"
-                    ] = "301-1000"
-                    df_small.loc[
-                        df_small.index < 300, "popularity_item_group"
-                    ] = "101-300"
-                    df_small.loc[df_small.index < 100, "popularity_item_group"] = "100"
-                    df_small.drop(columns=["index"], inplace=True)
-
-                df_small["filename_date"] = p_date
-                df_small["date_time"] = pd.to_datetime(
-                    df_small["filename_date"], format=conf.FILENAME_DATE_FORMAT
-                )
-                if i == 0:
-                    popular_item_group = df_small
-                else:
-                    popular_item_group = pd.concat([popular_item_group, df_small])
-            popular_item_group = popular_item_group.reset_index(drop=True)
-        else:
-            big_df = (
-                df.filter(F.col("content_type").cast(StringType()) != "31")
-                .select("profile_id", "item_id", "filename_date")
-                .dropDuplicates()
-            )
-
-            # Tạo dataframe các khoảng thời gian tương ứng để xử lý
-            date_ranges = [
-                (
-                    p_date,
-                    get_date_before(
-                        p_date, num_days_before=conf.ROLLING_PERIOD_FOR_POPULARITY_ITEM
-                    ),
-                )
-                for p_date in self.dates_to_extract
-            ]
-            date_df = self.spark.createDataFrame(
-                date_ranges, ["end_date", "start_date"]
-            )
-
-            # Thực hiện join dữ liệu để xử lý tất cả ngày một cách đồng thời
-            big_df = big_df.join(
-                date_df,
-                (big_df.filename_date <= F.col("end_date"))
-                & (big_df.filename_date > F.col("start_date")),
-                "inner",
-            )
-
-            # Nhóm và đếm số lượng item theo khoảng ngày
-            count_df = big_df.groupBy("item_id", "end_date").count()
-
-            # Xử lý rank dựa trên số lượng và xác định Group
-            window_spec = Window.partitionBy("end_date").orderBy(F.col("count").desc())
-            # "others": "0"
-            # "100": "1"
-            # "101-300": "2"
-            # "301-1000": "3"
-            # "1001-2000": "4"
-            # ">2000": "5"
-            result_df = (
-                count_df.withColumn("row", F.row_number().over(window_spec))
-                .withColumn(
-                    "popularity_item_group",
-                    F.when(F.col("row") <= 100, F.lit(1))
-                    .when(F.col("row") <= 300, F.lit(2))
-                    .when(F.col("row") <= 1000, F.lit(3))
-                    .when(F.col("row") <= 2000, F.lit(4))
-                    .otherwise(F.lit(5)),
-                )
-                .drop("row")
-            )
-
-            # Trường hợp ít hơn 15 ngày: gán dữ liệu mặc định
-            filename_date_count = big_df.groupBy("end_date").agg(
-                F.countDistinct("filename_date").alias("day_count")
-            )
-
-            result_df = result_df.join(filename_date_count, ["end_date"], "left")
-            result_df = result_df.withColumn(
-                "popularity_item_group",
-                F.when(F.col("day_count") < 15, F.lit(0)).otherwise(
-                    F.col("popularity_item_group")
                 ),
             )
-            # Thêm các cột ngày tháng
-            popular_item_group = result_df.withColumn(
-                "date_time", F.to_date(F.col("end_date").cast(StringType()), "yyyyMMdd")
-            ).drop("day_count")
-            popular_item_group = popular_item_group.withColumnRenamed(
-                "end_date", "filename_date"
+            for p_date in self.dates_to_extract
+        ]
+        date_df = self.spark.createDataFrame(date_ranges, ["end_date", "start_date"])
+
+        # Thực hiện join dữ liệu để xử lý tất cả ngày một cách đồng thời
+        big_df = big_df.join(
+            date_df,
+            (big_df.filename_date <= F.col("end_date"))
+            & (big_df.filename_date > F.col("start_date")),
+            "inner",
+        )
+
+        # Nhóm và đếm số lượng item theo khoảng ngày
+        count_df = big_df.groupBy("item_id", "end_date").count()
+
+        # Xử lý rank dựa trên số lượng và xác định Group
+        window_spec = Window.partitionBy("end_date").orderBy(F.col("count").desc())
+        # "others": "0"
+        # "100": "1"
+        # "101-300": "2"
+        # "301-1000": "3"
+        # "1001-2000": "4"
+        # ">2000": "5"
+        result_df = (
+            count_df.withColumn("row", F.row_number().over(window_spec))
+            .withColumn(
+                "popularity_item_group",
+                F.when(F.col("row") <= 100, F.lit(1))
+                .when(F.col("row") <= 300, F.lit(2))
+                .when(F.col("row") <= 1000, F.lit(3))
+                .when(F.col("row") <= 2000, F.lit(4))
+                .otherwise(F.lit(5)),
             )
+            .drop("row")
+        )
+
+        # Trường hợp ít hơn 15 ngày: gán dữ liệu mặc định
+        filename_date_count = big_df.groupBy("end_date").agg(
+            F.countDistinct("filename_date").alias("day_count")
+        )
+
+        result_df = result_df.join(filename_date_count, ["end_date"], "left")
+        result_df = result_df.withColumn(
+            "popularity_item_group",
+            F.when(F.col("day_count") < 15, F.lit(0)).otherwise(
+                F.col("popularity_item_group")
+            ),
+        )
+        # Thêm các cột ngày tháng
+        popular_item_group = result_df.withColumn(
+            "date_time", F.to_date(F.col("end_date").cast(StringType()), "yyyyMMdd")
+        ).drop("day_count")
+        popular_item_group = popular_item_group.withColumnRenamed(
+            "end_date", "filename_date"
+        )
         return popular_item_group
 
 
@@ -199,75 +150,7 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
         )
 
     def preprocess_feature(self, df):
-        if self.process_lib in ["pandas"]:
-            user_prefer_type = self.preprocess_feature_by_pandas(df)
-        else:
-            user_prefer_type = self.preprocess_feature_by_pyspark(df)
-        return user_prefer_type
-
-    def preprocess_feature_by_pandas(self, big_df):
-        """
-        Processes user-related data using Pandas to compute feature preferences.
-
-        Args:
-            big_df (pandas.DataFrame): Input DataFrame containing user interaction
-                data.
-
-        Returns:
-            pandas.DataFrame: A pandas DataFrame
-        """
-        big_df = big_df[big_df["content_type"].astype(str) != "31"]
-        big_df = big_df[["user_id", "content_type", "filename_date"]].drop_duplicates()
-        big_df = big_df.reset_index(drop=True)
-        big_df["movie_or_vod"] = "vod"
-        big_df.loc[
-            big_df["content_type"].isin(conf.MOVIE_TYPE_GROUP), "movie_or_vod"
-        ] = "movie"
-
-        for i, p_date in enumerate(self.dates_to_extract):
-            begin_date = get_date_before(
-                p_date, num_days_before=conf.ROLLING_PERIOD_FOR_USER_PREFER_TYPE
-            )
-            df_small = big_df[
-                (big_df.filename_date <= p_date) & (big_df.filename_date > begin_date)
-            ]
-            if df_small["filename_date"].drop_duplicates().count() < int(
-                conf.ROLLING_PERIOD_FOR_USER_PREFER_TYPE / 2
-            ):
-                df_small = df_small["user_id"].drop_duplicates().to_frame()
-                df_small["prefer_movie_type"] = "0"
-                df_small["prefer_vod_type"] = "0"
-            else:
-                df_small = (
-                    df_small.groupby(["user_id", "movie_or_vod"])
-                    .agg({"content_type": "count"})
-                    .reset_index()
-                )
-                df_small = df_small.rename(columns={"content_type": "prefer_type"})
-                df_small = df_small.pivot(
-                    index="user_id", columns="movie_or_vod", values="prefer_type"
-                ).reset_index()
-                df_small["movie"] = df_small["movie"].fillna("0")
-                df_small["vod"] = df_small["vod"].fillna("0")
-                df_small["movie"] = df_small["movie"].astype(int).astype(str)
-                df_small["vod"] = df_small["vod"].astype(int).astype(str)
-                df_small = df_small.rename(
-                    columns={"movie": "prefer_movie_type", "vod": "prefer_vod_type"}
-                )
-                df_small["prefer_movie_type"] = df_small["prefer_movie_type"].fillna(
-                    "0"
-                )
-                df_small["prefer_vod_type"] = df_small["prefer_vod_type"].fillna("0")
-
-            df_small["filename_date"] = p_date
-            df_small["date_time"] = pd.to_datetime(
-                df_small["filename_date"], format=conf.FILENAME_DATE_FORMAT
-            )
-            if i == 0:
-                user_prefer_type = df_small
-            else:
-                user_prefer_type = pd.concat([user_prefer_type, df_small])
-        user_prefer_type = user_prefer_type.reset_index(drop=True)
+        user_prefer_type = self.preprocess_feature_by_pyspark(df)
         return user_prefer_type
 
     def preprocess_feature_by_pyspark(self, big_df):
@@ -283,82 +166,81 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
                 preferences.
         """
 
-        # Ép kiểu dữ liệu content_type trước khi filter để tránh ép kiểu nhiều lần
-        big_df = big_df.withColumn(
-            "content_type_str", F.col("content_type").cast("string")
-        )
-
-        # Cache DataFrame sau khi lọc và distinct để tái sử dụng
-        filtered_df = big_df.filter(F.col("content_type_str") != "31").distinct()
-
-        # Chuyển đổi các giá trị MOVIE_TYPE_GROUP thành broadcast set để tối ưu join
-        movie_types = self.spark.sparkContext.broadcast(set(conf.MOVIE_TYPE_GROUP))
-
-        # Sử dụng UDF để xác định movie_or_vod, giảm chi phí kiểm tra isin()
-        def determine_type(content_type):
-            if content_type in movie_types.value:
-                return "movie"
-            return "vod"
-
-        determine_type_udf = F.udf(determine_type, StringType())
-
-        # Áp dụng UDF và chỉ chọn các cột cần thiết để giảm kích thước dữ liệu
-        typed_df = filtered_df.withColumn(
-            "movie_or_vod", determine_type_udf("content_type")
-        ).select("user_id", "content_type", "filename_date", "movie_or_vod")
-
-        # Tính toán date_ranges một lần và broadcast
-        date_ranges = [
-            (
-                p_date,
-                get_date_before(
-                    p_date, num_days_before=conf.ROLLING_PERIOD_FOR_USER_PREFER_TYPE
-                ),
+        # 1. Tối ưu cast operations bằng cách gom nhóm
+        big_df = (
+            big_df.drop("username")
+            .select(
+                "*",
+                F.col("content_id").cast("int").alias("content_id_int"),
+                F.col("content_type").cast("int").alias("content_type_int"),
+                F.col("profile_id").cast("int").alias("profile_id_int"),
             )
-            for p_date in self.dates_to_extract
-        ]
-
-        # Tạo DataFrame cho date_ranges
-        date_df = self.spark.createDataFrame(date_ranges, ["end_date", "begin_date"])
-
-        # Sử dụng broadcast join thay vì crossJoin để cải thiện hiệu suất
-        # Điều này khả thi vì date_df thường có kích thước nhỏ
-        user_prefer_type = typed_df.join(
-            F.broadcast(date_df),
-            (typed_df.filename_date <= F.col("end_date"))
-            & (typed_df.filename_date > F.col("begin_date")),
+            .drop("content_id", "content_type", "profile_id")
+            .withColumnRenamed("content_id_int", "content_id")
+            .withColumnRenamed("content_type_int", "content_type")
+            .withColumnRenamed("profile_id_int", "profile_id")
         )
 
-        # Sử dụng cache cho dữ liệu trung gian
-        # trước khi thực hiện các phép tính toán phức tạp
-        user_prefer_type = user_prefer_type.cache()
+        # 2. Tối ưu filter và persist với partition
+        filtered_df = (
+            big_df.filter(F.col("content_type") != 31)
+            .dropDuplicates(["user_id", "content_type", "filename_date"])
+            .repartition("user_id")
+            .persist(StorageLevel.MEMORY_AND_DISK)
+        )  # Sử dụng MEMORY_AND_DISK thay vì MEMORY_AND_DISK_SER
 
-        # Nhóm và tổng hợp dữ liệu
-        user_prefer_type = user_prefer_type.groupBy(
-            "user_id", "movie_or_vod", "end_date"
-        ).agg(F.count("content_type").alias("prefer_count"))
+        # 3. Broadcast nhỏ gọn movie_types và cache
+        movie_types_df = self.spark.createDataFrame(
+            [(x,) for x in conf.MOVIE_TYPE_GROUP], ["content_type"]
+        ).persist(StorageLevel.MEMORY_AND_DISK)
 
-        # Sử dụng pivot để tạo các cột movie và vod
+        movie_types = F.broadcast(movie_types_df)
+
+        # 4. Tối ưu xác định movie/vod bằng join thay vì UDF
+        typed_df = (
+            filtered_df.join(movie_types, "content_type", "left")
+            .withColumn(
+                "movie_or_vod",
+                F.when(F.col("content_type").isNotNull(), "movie").otherwise("vod"),
+            )
+            .select("user_id", "content_type", "filename_date", "movie_or_vod")
+        )
+
+        # 5. Tối ưu date ranges và cache
+        date_ranges_df = self.spark.createDataFrame(
+            [
+                (d, get_date_before(d, conf.ROLLING_PERIOD_FOR_USER_PREFER_TYPE))
+                for d in self.dates_to_extract
+            ],
+            ["end_date", "begin_date"],
+        ).persist(StorageLevel.MEMORY_AND_DISK)
+
+        # 6. Sử dụng window function và tối ưu join
+
         user_prefer_type = (
-            user_prefer_type.groupBy("user_id", "end_date")
+            typed_df.join(
+                F.broadcast(date_ranges_df),
+                (typed_df.filename_date <= F.col("end_date"))
+                & (typed_df.filename_date > F.col("begin_date")),
+            )
+            .groupBy("user_id", "movie_or_vod", "end_date")
+            .agg(F.count("*").alias("prefer_count"))
+            .groupBy("user_id", "end_date")
             .pivot("movie_or_vod", ["movie", "vod"])
             .agg(F.first("prefer_count"))
-            .fillna(0)
+            .na.fill(0)
             .withColumnRenamed("movie", "prefer_movie_type")
             .withColumnRenamed("vod", "prefer_vod_type")
         )
 
-        # Chuyển đổi kiểu dữ liệu cho cột date_time
+        # 7. Tối ưu chuyển đổi datetime
         user_prefer_type = user_prefer_type.withColumn(
             "date_time", F.to_date(F.col("end_date"), "yyyyMMdd")
-        )
+        ).withColumnRenamed("end_date", "filename_date")
 
-        # Đổi tên cột cuối cùng
-        user_prefer_type = user_prefer_type.withColumnRenamed(
-            "end_date", "filename_date"
-        )
-
-        # Giải phóng bộ nhớ
-        user_prefer_type.unpersist()
+        # 8. Cleanup resources
+        filtered_df.unpersist()
+        movie_types_df.unpersist()
+        date_ranges_df.unpersist()
 
         return user_prefer_type

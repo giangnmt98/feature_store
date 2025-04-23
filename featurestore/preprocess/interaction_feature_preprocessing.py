@@ -398,9 +398,6 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
                 shutil.rmtree(temp_dir, ignore_errors=True)
                 logger.info(f"Cleaned up temporary directory {temp_dir}")
 
-        # Giải phóng bộ nhớ
-        self.content_type_df.unpersist()
-
     def _negative_sample(self, big_df: DataFrame) -> DataFrame:
         """Thực hiện lấy mẫu âm (negative sampling) cho dữ liệu tương tác.
 

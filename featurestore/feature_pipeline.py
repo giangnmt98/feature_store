@@ -5,6 +5,8 @@ This module defines the logic for managing feature engineering workflows as part
 a feature store pipeline. It integrates feature preprocessing, registration,
 materialization, training, and inference operations into a cohesive pipeline.
 """
+import gc
+
 import pandas as pd
 from feathr import FeathrClient
 
@@ -178,6 +180,9 @@ class FeaturePipeline:
         """
         logger.info("PREPROCESS FEATURES")
         self.preprocess_features()
+
+        # Clean up memory before next step
+        gc.collect()
         logger.info("REGISTER FEATURES")
         self.register_features()
         logger.info("GET TRAINING FEATURES")

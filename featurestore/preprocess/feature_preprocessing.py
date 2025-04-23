@@ -133,7 +133,7 @@ class AccountFeaturePreprocessing(BaseFeaturePreprocessing):
             )
         return df
 
-    def run(self, is_save):
+    def run(self, is_save=True):
         self.read_processed_data()
         df = self.initialize_dataframe()
         df = self.preprocess_feature(df)
