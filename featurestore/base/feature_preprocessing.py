@@ -77,31 +77,22 @@ class BaseFeaturePreprocessing(ABC):
             DataFrame: The dataset with an additional `user_id` column representing
                 a unique user key.
         """
-        if self.process_lib in ["pandas"]:
-            df["user_id"] = df["profile_id"].copy()
-            df.loc[df["user_id"] == -1, "user_id"] = 0
-            df["user_id"] = df["user_id"].fillna(0)
-            df["user_id"] = df["user_id"].astype(int).astype(str)
-            df["username"] = df["username"].str.lower()
-            df["user_id"] = df["user_id"] + "#" + df["username"]
-            df = df[~df["user_id"].isnull()]
-        else:
-            df = df.withColumn("user_id", F.col("profile_id"))
-            df = df.withColumn(
-                "user_id",
-                F.when(F.col("user_id").cast(StringType()) == "-1", "0").otherwise(
-                    F.col("user_id")
-                ),
-            )
-            df = df.na.fill({"user_id": "0"})
-            df = df.withColumn("user_id", F.round(F.col("user_id")).cast(LongType()))
-            df = df.withColumn("user_id", F.col("user_id").cast(StringType()))
-            df = df.withColumn("username", F.lower(F.col("username")))
-            df = df.withColumn(
-                "user_id",
-                F.concat(F.col("user_id"), F.lit("#"), F.col("username")),
-            )
-            df = df.filter(F.col("user_id").isNotNull())
+        df = df.withColumn("user_id", F.col("profile_id"))
+        df = df.withColumn(
+            "user_id",
+            F.when(F.col("user_id").cast(StringType()) == "-1", "0").otherwise(
+                F.col("user_id")
+            ),
+        )
+        df = df.na.fill({"user_id": "0"})
+        df = df.withColumn("user_id", F.round(F.col("user_id")).cast(LongType()))
+        df = df.withColumn("user_id", F.col("user_id").cast(StringType()))
+        df = df.withColumn("username", F.lower(F.col("username")))
+        df = df.withColumn(
+            "user_id",
+            F.concat(F.col("user_id"), F.lit("#"), F.col("username")),
+        )
+        df = df.filter(F.col("user_id").isNotNull())
         return df
 
     def create_item_key(self, df):
@@ -116,15 +107,12 @@ class BaseFeaturePreprocessing(ABC):
             DataFrame: The dataset with an additional `item_id` column
                 representing a unique item key.
         """
-        if self.process_lib in ["pandas"]:
-            df["item_id"] = df["content_type"] + "#" + df["content_id"]
-            df = df[~df["item_id"].isnull()]
-        else:
-            df = df.withColumn(
-                "item_id",
-                F.concat(F.col("content_type"), F.lit("#"), F.col("content_id")),
-            )
-            df = df.filter(F.col("item_id").isNotNull())
+        df = df.withColumn(
+            "item_id",
+            (F.col("content_type").cast("bigint") * F.lit(10000000))
+            + F.col("content_id").cast("bigint"),
+        )
+        df = df.filter(F.col("item_id").isNotNull())
         return df
 
     @abstractmethod
@@ -167,34 +155,21 @@ class BaseFeaturePreprocessing(ABC):
             version (int, optional): Version of the hashing function. Defaults to 1.
 
         Returns:
-            DataFrame: The dataset with hashed features added.
+            DataFrame: The dataset with hashed features is added.
         """
-        if self.process_lib in ["pandas"]:
-            for output_feature in output_feature_names:
-                dependency_col, hash_bucket_size = self._get_hash_dependency_info(
-                    output_feature, hash_dependency_info, spare_feature_info
-                )
-                df = HashingClass(self.raw_data_dir).hashing_func(
-                    df,
-                    output_feature,
-                    dependency_col,
-                    hash_bucket_size,
-                    "pandas",
-                    version,
-                )
-        else:
-            for output_feature in output_feature_names:
-                dependency_col, hash_bucket_size = self._get_hash_dependency_info(
-                    output_feature, hash_dependency_info, spare_feature_info
-                )
-                df = HashingClass(self.raw_data_dir).hashing_func(
-                    df,
-                    output_feature,
-                    dependency_col,
-                    hash_bucket_size,
-                    "pyspark",
-                    version,
-                )
+
+        for output_feature in output_feature_names:
+            dependency_col, hash_bucket_size = self._get_hash_dependency_info(
+                output_feature, hash_dependency_info, spare_feature_info
+            )
+            df = HashingClass(self.raw_data_dir).hashing_func(
+                df,
+                output_feature,
+                dependency_col,
+                hash_bucket_size,
+                "pyspark",
+                version,
+            )
         return df
 
     def _get_hash_dependency_info(
@@ -318,7 +293,7 @@ class BaseDailyFeaturePreprocessing(BaseFeaturePreprocessing):
         dates_to_extract: Optional[List] = None,
         filters: Optional[List] = None,
         schema: Optional[Any] = None,
-    ) -> pd.DataFrame:
+    ):
         """
         Loads raw data for processing using either Pandas or PySpark.
 
@@ -329,7 +304,7 @@ class BaseDailyFeaturePreprocessing(BaseFeaturePreprocessing):
             schema (any, optional): Schema to apply when loading data with PySpark.
 
         Returns:
-            pd.DataFrame: The loaded raw dataset ready for processing.
+            DataFrame: The loaded raw dataset ready for processing.
         """
         assert (
             dates_to_extract is None or len(dates_to_extract) > 0
@@ -344,45 +319,33 @@ class BaseDailyFeaturePreprocessing(BaseFeaturePreprocessing):
             filters = (filters + date_filters) if date_filters else filters
         else:
             filters = date_filters
-        if self.process_lib == "pandas":
-            pandas_filters = filters
-            df = load_parquet_data(
-                file_paths=data_path,
-                with_columns=with_columns,
-                process_lib=self.process_lib,
-                filters=pandas_filters,
-            )
-            if len(df) == 0:
-                raise ValueError(
-                    f"No data found in " f"{data_path} with filters: {pandas_filters}"
+
+        pyspark_filters = (
+            [
+                (
+                    item[0],
+                    item[1],
+                    [str(it) for it in item[2]]
+                    if (isinstance(item[2], list) and (item[0] == "filename_date"))
+                    else item[2],
                 )
-        else:
-            pyspark_filters = (
-                [
-                    (
-                        item[0],
-                        item[1],
-                        [str(it) for it in item[2]]
-                        if (isinstance(item[2], list) and (item[0] == "filename_date"))
-                        else item[2],
-                    )
-                    for item in filters
-                ]
-                if filters
-                else None
+                for item in filters
+            ]
+            if filters
+            else None
+        )
+        df = load_parquet_data(
+            file_paths=data_path,
+            with_columns=with_columns,
+            process_lib=self.process_lib,
+            filters=pyspark_filters,
+            spark=self.spark,
+            schema=schema,
+        )
+        if df.rdd.isEmpty():
+            raise ValueError(
+                f"No data found in " f"{data_path} with filters: {pyspark_filters}"
             )
-            df = load_parquet_data(
-                file_paths=data_path,
-                with_columns=with_columns,
-                process_lib=self.process_lib,
-                filters=pyspark_filters,
-                spark=self.spark,
-                schema=schema,
-            )
-            if df.rdd.isEmpty():
-                raise ValueError(
-                    f"No data found in " f"{data_path} with filters: {pyspark_filters}"
-                )
         return df
 
     def save_preprocessed_data(self, df):
@@ -471,17 +434,8 @@ class BaseOnlineFeaturePreprocessing(BaseDailyFeaturePreprocessing):
         self.raw_data[DataName.VOD_HISTORY] = vod_df
 
     def initialize_dataframe(self):
-        if self.process_lib == "pandas":
-            df = pd.concat(
-                [
-                    self.raw_data[DataName.MOVIE_HISTORY],
-                    self.raw_data[DataName.VOD_HISTORY],
-                ]
-            )
-        else:
-            df = self.raw_data[DataName.MOVIE_HISTORY].union(
-                self.raw_data[DataName.VOD_HISTORY]
-            )
-        df = self.create_user_key(df)
+        df = self.raw_data[DataName.MOVIE_HISTORY].union(
+            self.raw_data[DataName.VOD_HISTORY]
+        )
         df = self.create_item_key(df)
         return df

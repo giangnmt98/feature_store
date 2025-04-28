@@ -6,20 +6,14 @@ in recommendation systems or predictive modeling. The preprocessing includes tas
 combine movie and video-on-demand (VOD) interaction data, create user and item keys,
 and perform transformations like negative sampling.
 """
-from typing import Union
-
-import pandas as pd
 import pyspark.sql.functions as F
-from pyspark import StorageLevel
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.types import StringType
-from tqdm import tqdm
 
 from configs import conf
 from featurestore.base.feature_preprocessing import BaseDailyFeaturePreprocessing
 from featurestore.base.utils.fileops import load_parquet_data
 from featurestore.base.utils.logger import logger
-from featurestore.base.utils.utils import split_batches
 from featurestore.constants import DataName
 
 
@@ -73,11 +67,15 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
         self.raw_data[DataName.CONTENT_TYPE] = content_type_df
 
     def initialize_dataframe(self):
-        movie_df = self.raw_data[DataName.MOVIE_HISTORY].withColumn(
-            "is_vod_content", F.lit(False)
+        movie_df = (
+            self.raw_data[DataName.MOVIE_HISTORY]
+            .withColumn("is_vod_content", F.lit(False))
+            .drop("username")
         )
-        vod_df = self.raw_data[DataName.VOD_HISTORY].withColumn(
-            "is_vod_content", F.lit(True)
+        vod_df = (
+            self.raw_data[DataName.VOD_HISTORY]
+            .withColumn("is_vod_content", F.lit(True))
+            .drop("username")
         )
         vod_df = vod_df.withColumn(
             "is_vod_content",
@@ -87,7 +85,6 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
         )
         big_df = movie_df.union(vod_df)
 
-        big_df = self.create_user_key(big_df)
         big_df = self.create_item_key(big_df)
 
         big_df = big_df.drop("username")
@@ -101,7 +98,6 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
         )
         big_df = big_df.filter(F.col("profile_id") != 0)
         big_df = big_df.groupBy(
-            "user_id",
             "item_id",
             "profile_id",
             "content_id",
@@ -124,7 +120,7 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
     def _negative_sample(self, big_df):
         negative_sample_ratio = 12
         mean_samples_per_day = (
-            big_df.groupby(["user_id", "profile_id", "filename_date"])
+            big_df.groupby(["profile_id", "filename_date"])
             .agg(F.count("item_id").alias("count"))
             .agg(F.mean("count").alias("mean"))
             .select("mean")
@@ -138,9 +134,7 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
             "filename_date",
             "is_vod_content",
         ).dropDuplicates()
-        user_df = big_df.select(
-            "user_id", "profile_id", "filename_date"
-        ).dropDuplicates()
+        user_df = big_df.select("profile_id", "filename_date").dropDuplicates()
         neg_interact_df = self._negative_sample_each_day(
             user_df, item_df, negative_samples_per_day, big_df
         )
@@ -185,7 +179,6 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
         neg_interact_df = (
             neg_interact_df.groupby(
                 [
-                    "user_id",
                     "profile_id",
                     "filename_date",
                     "is_vod_content",
@@ -193,13 +186,11 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
                 ]
             ).agg(F.max_by("item_id", "random_selection").alias("item_id"))
         ).drop("random_group", "random_selection")
+
         neg_interact_df = neg_interact_df.withColumn(
-            "content_type",
-            F.concat_ws("_", F.lit("type"), F.split(F.col("item_id"), "_", 2)[0]),
-        ).withColumn("content_id", F.split(F.col("item_id"), "_", 2)[1])
-        neg_interact_df = neg_interact_df.withColumn(
-            "content_id", F.col("content_id").cast("int")
-        )
+            "content_type", F.floor(F.col("item_id") / F.lit(100000000)).cast("int")
+        ).withColumn("content_id", (F.col("item_id") % F.lit(100000000)).cast("int"))
+
         neg_interact_df = neg_interact_df.withColumn(
             "content_type", F.col("content_type").cast("int")
         )

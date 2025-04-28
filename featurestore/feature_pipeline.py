@@ -176,9 +176,6 @@ class FeaturePipeline:
         """
         logger.info("PREPROCESS FEATURES")
         self.preprocess_features()
-        import gc
-
-        gc.collect()
         logger.info("REGISTER FEATURES")
         self.register_features()
         logger.info("GET TRAINING FEATURES")

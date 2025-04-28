@@ -149,17 +149,13 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
             spark_config,
         )
 
-    def preprocess_feature(self, df):
-        user_prefer_type = self.preprocess_feature_by_pyspark(df)
-        return user_prefer_type
-
-    def preprocess_feature_by_pyspark(self, big_df):
+    def preprocess_feature(self, big_df):
         """
-        Processes user-related data using PySpark to compute feature preferences.
+         Processes user-related data using PySpark to compute feature preferences.
 
         Args:
             big_df: Input PySpark DataFrame containing user
-                interaction data (user_id, content_type, filename_date).
+                interaction data (profile_id, content_type, filename_date).
 
         Returns:
             pyspark.sql.DataFrame: A PySpark DataFrame containing preprocessed user
@@ -168,8 +164,7 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
 
         # 1. Tối ưu cast operations bằng cách gom nhóm
         big_df = (
-            big_df.drop("username")
-            .select(
+            big_df.select(
                 "*",
                 F.col("content_id").cast("int").alias("content_id_int"),
                 F.col("content_type").cast("int").alias("content_type_int"),
@@ -184,10 +179,10 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
         # 2. Tối ưu filter và persist với partition
         filtered_df = (
             big_df.filter(F.col("content_type") != 31)
-            .dropDuplicates(["user_id", "content_type", "filename_date"])
-            .repartition("user_id")
+            .dropDuplicates(["profile_id", "content_type", "filename_date"])
+            .repartition("profile_id")
             .persist(StorageLevel.MEMORY_AND_DISK)
-        )  # Sử dụng MEMORY_AND_DISK thay vì MEMORY_AND_DISK_SER
+        )
 
         # 3. Broadcast nhỏ gọn movie_types và cache
         movie_types_df = self.spark.createDataFrame(
@@ -203,7 +198,7 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
                 "movie_or_vod",
                 F.when(F.col("content_type").isNotNull(), "movie").otherwise("vod"),
             )
-            .select("user_id", "content_type", "filename_date", "movie_or_vod")
+            .select("profile_id", "content_type", "filename_date", "movie_or_vod")
         )
 
         # 5. Tối ưu date ranges và cache
@@ -223,9 +218,9 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
                 (typed_df.filename_date <= F.col("end_date"))
                 & (typed_df.filename_date > F.col("begin_date")),
             )
-            .groupBy("user_id", "movie_or_vod", "end_date")
+            .groupBy("profile_id", "movie_or_vod", "end_date")
             .agg(F.count("*").alias("prefer_count"))
-            .groupBy("user_id", "end_date")
+            .groupBy("profile_id", "end_date")
             .pivot("movie_or_vod", ["movie", "vod"])
             .agg(F.first("prefer_count"))
             .na.fill(0)
@@ -242,5 +237,4 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
         filtered_df.unpersist()
         movie_types_df.unpersist()
         date_ranges_df.unpersist()
-
         return user_prefer_type

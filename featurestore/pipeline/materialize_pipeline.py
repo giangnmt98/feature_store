@@ -148,6 +148,7 @@ class MaterializePipeline:
         """
         backfill_time = self._get_backfill_config(table_name_list)
         sink_list = self._get_sink_list(table_name_list)
+        print("AAAAAAAAAAAAAAAAAAAAAAAAA", table_name_list)
         settings = MaterializationSettings(
             name=setting_name,
             sinks=sink_list,

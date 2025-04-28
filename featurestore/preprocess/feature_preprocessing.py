@@ -191,16 +191,17 @@ class ProfileFeaturePreprocessing(BaseFeaturePreprocessing):
 
     def preprocess_feature(self, df):
         spare_feature_info = conf.DhashSpareFeatureInfo()
+        print("AAAAAAAAAAAAAAAAAAAA", spare_feature_info)
         df = self.preprocess_hashed_id(
             df,
-            output_feature_names=["hashed_user_id"],
-            hash_dependency_info={"hashed_user_id": "user_id"},
+            output_feature_names=["hashed_profile_id"],
+            hash_dependency_info={"hashed_profile_id": "profile_id"},
             spare_feature_info=spare_feature_info,
         )
         df = self.preprocess_hashed_id(
             df,
-            output_feature_names=["hashed_user_id_v2"],
-            hash_dependency_info={"hashed_user_id_v2": "user_id"},
+            output_feature_names=["hashed_profile_id_v2"],
+            hash_dependency_info={"hashed_profile_id_v2": "profile_id"},
             spare_feature_info=spare_feature_info,
             version=2,
         )
@@ -233,30 +234,34 @@ class UserFeaturePreprocessing(BaseFeaturePreprocessing):
         super().__init__(process_lib, raw_data_path, save_filename, spark_config)
 
     def read_processed_data(self):
-        account_df = AccountFeaturePreprocessing(
-            self.process_lib, self.raw_data_dir
-        ).run()
-        profile_df = ProfileFeaturePreprocessing(
-            self.process_lib, self.raw_data_dir
-        ).run()
-        self.raw_data[DataName.ACCOUNT_MYTV_INFO] = account_df
-        self.raw_data[DataName.PROFILE_MYTV_INFO] = profile_df
+        pass
 
     def initialize_dataframe(self):
-        if self.process_lib == "pandas":
-            self.raw_data[DataName.ACCOUNT_MYTV_INFO] = self.raw_data[
-                DataName.ACCOUNT_MYTV_INFO
-            ].drop(columns=["profile_id"])
-            df = self.raw_data[DataName.PROFILE_MYTV_INFO].merge(
-                self.raw_data[DataName.ACCOUNT_MYTV_INFO], on="username", how="left"
-            )
-        else:
-            self.raw_data[DataName.ACCOUNT_MYTV_INFO] = self.raw_data[
-                DataName.ACCOUNT_MYTV_INFO
-            ].drop(F.col("profile_id"))
-            df = self.raw_data[DataName.PROFILE_MYTV_INFO].join(
-                self.raw_data[DataName.ACCOUNT_MYTV_INFO], on="username", how="left"
-            )
+        # self.raw_data[DataName.ACCOUNT_MYTV_INFO] = self.raw_data[
+        #     DataName.ACCOUNT_MYTV_INFO
+        # ].drop(F.col("profile_id"))
+        # df = self.raw_data[DataName.ACCOUNT_MYTV_INFO].join(
+        #     self.raw_data[DataName.PROFILE_MYTV_INFO], on="username", how="left"
+        # )
+        df = self.spark.read.parquet(str(self.raw_data_dir) + "/" + "user_info.parquet")
+
+        return df
+
+    def preprocess_feature(self, df):
+        spare_feature_info = conf.DhashSpareFeatureInfo()
+        df = self.preprocess_hashed_id(
+            df,
+            output_feature_names=["hashed_profile_id"],
+            hash_dependency_info={"hashed_profile_id": "profile_id"},
+            spare_feature_info=spare_feature_info,
+        )
+        df = self.preprocess_hashed_id(
+            df,
+            output_feature_names=["hashed_profile_id_v2"],
+            hash_dependency_info={"hashed_profile_id_v2": "profile_id"},
+            spare_feature_info=spare_feature_info,
+            version=2,
+        )
         return df
 
 
@@ -289,5 +294,7 @@ class ABUserFeaturePreprocessing(BaseFeaturePreprocessing):
         self.raw_data[DataName.AB_TESTING_USER_INFO] = df
 
     def initialize_dataframe(self):
-        df = self.create_user_key(self.raw_data[DataName.AB_TESTING_USER_INFO])
+        df = self.raw_data[DataName.AB_TESTING_USER_INFO].select(
+            ["profile_id", "group_id"]
+        )
         return df

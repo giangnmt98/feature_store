@@ -57,7 +57,7 @@ def load_parquet_data_by_pyspark(
             if Path(f"{file_paths}/{partition_column}={value}").exists()
         ]
         # Đọc dữ liệu từ những đường dẫn này
-        if with_columns is None:
+        if with_columns is not None:
             df = (
                 spark.read.parquet(*paths)
                 .withColumn(
@@ -159,47 +159,6 @@ def load_parquet_data(
     Returns:
         DataFrame depending on the selected library.
     """
-    # pylint: disable=C0415
-    if process_lib == "pandas":
-        filters = pq.filters_to_expression(filters) if filters else None
-        if isinstance(file_paths, list):
-            assert len(file_paths) > 0
-            table = pq.read_table(file_paths[0])
-            map_key_values = dict(zip(table.schema.names, table.schema.types))
-            file_paths = [
-                ds.dataset(p, format="parquet", partitioning="hive") for p in file_paths
-            ]
-
-            df = (
-                ds.dataset(file_paths)
-                .to_table(columns=with_columns, filter=filters)
-                .to_pandas()
-            )
-
-        else:
-            table = pq.read_table(file_paths)
-            df = (
-                ds.dataset(file_paths, format="parquet", partitioning="hive")
-                .to_table(columns=with_columns, filter=filters)
-                .to_pandas()
-            )
-            map_key_values = dict(zip(table.schema.names, table.schema.types))
-        if schema:
-            return df.astype(schema)
-        for col in df.columns:
-            try:
-                np_type = __convert_pyarrowschema_to_pandasschema(map_key_values[col])
-                if np_type is not None:
-                    df[col] = df[col].astype(np_type)
-            except Exception as ex:
-                print(ex)
-                np_type = __convert_pyarrowschema_to_pandasschema(
-                    map_key_values[col], is_pass_null=True
-                )
-                if np_type is not None:
-                    df[col] = df[col].astype(np_type)
-        return df
-
     return load_parquet_data_by_pyspark(
         file_paths=file_paths,
         with_columns=with_columns,

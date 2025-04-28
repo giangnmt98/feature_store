@@ -122,15 +122,14 @@ class FeatureRegistry:
             self.feature_transform.f_province,
             self.feature_transform.f_package_code,
             self.feature_transform.f_sex,
-            self.feature_transform.f_platform,
         ]
         user_feature_anchor = FeatureAnchor(
             name="userFeatures", source=self.user_batch_source, features=user_features
         )
 
         profile_features = [
-            self.feature_transform.f_hashed_user_id,
-            self.feature_transform.f_hashed_user_id_v2,
+            self.feature_transform.f_hashed_profile_id,
+            self.feature_transform.f_hashed_profile_id_v2,
         ]
         profile_feature_anchor = FeatureAnchor(
             name="profileFeatures",

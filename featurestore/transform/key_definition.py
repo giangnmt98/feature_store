@@ -31,11 +31,11 @@ class KeyDefinition(metaclass=SingletonMeta):
     def __init__(
         self,
     ):
-        self.user_key = TypedKey(
-            key_column="user_id",
+        self.profile_key = TypedKey(
+            key_column="profile_id",
             key_column_type=ValueType.STRING,
-            description="user id",
-            full_name="mytv.user_id",
+            description="Profile id",
+            full_name="mytv.profile_id",
         )
         self.item_key = TypedKey(
             key_column="item_id",
@@ -45,6 +45,6 @@ class KeyDefinition(metaclass=SingletonMeta):
         )
 
         self.key_collection = {
-            "user_id": self.user_key,
+            "profile_id": self.profile_key,
             "item_id": self.item_key,
         }

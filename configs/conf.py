@@ -247,7 +247,7 @@ class SpareFeatureInfo(metaclass=SingletonMeta):
             self._closest_upper(list(self.num_user_to_bucket_size.keys()), num_user)
         ]
         self.hashed_features: Dict[str, int] = {
-            "hashed_user_id": bucket_size,
+            "hashed_profile_id": bucket_size,
             "hashed_item_id": bucket_size,
             "hashed_content_category": 4001,
             "hashed_num_months_from_publish": 997,
@@ -294,8 +294,8 @@ class DhashSpareFeatureInfo(SpareFeatureInfo):
             )
         ]
         self.hashed_features: Dict[str, int] = {
-            "hashed_user_id": bucket_size,
-            "hashed_user_id_v2": bucket_size,
+            "hashed_profile_id": bucket_size,
+            "hashed_profile_id_v2": bucket_size,
             "hashed_item_id": bucket_size,
             "hashed_item_id_v2": bucket_size,
             "hashed_content_category": 4001,
@@ -489,7 +489,6 @@ valid_package_code = {
 SELECTED_HISTORY_COLUMNS = [
     "content_id",
     "content_type",
-    "username",
     "profile_id",
     "duration",
     "date_time",

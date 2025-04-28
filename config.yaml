@@ -8,9 +8,11 @@ training_pipeline_config_path: configs/training_pipeline_config.yaml
 materialize_pipeline_config_path: configs/materialize_pipeline_config.yaml
 infer_pipeline_config_path: configs/infer_pipeline_config.yaml
 feathr_jar_path: /home/giang/VNPTAI/feathr_core/build/libs/vnpt_feathr-0.0.1.jar
+
 process_lib: pyspark
 job_retry: 3
 job_retry_sec: 180
+item_id_hash_base: 100000000
 spark_config:
   name: "spark-application"  # Tên Spark Application
   master: "local[*]"         # Chế độ chạy Spark, thay thế * bằng số cores cụ thể nếu cần

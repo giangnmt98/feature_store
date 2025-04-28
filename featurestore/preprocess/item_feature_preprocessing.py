@@ -13,10 +13,7 @@ from unidecode import unidecode
 from configs import conf
 from featurestore.base.feature_preprocessing import BaseDailyFeaturePreprocessing
 from featurestore.base.utils.fileops import load_parquet_data
-from featurestore.base.utils.utils import (
-    norm_content_category,
-    norm_content_category_by_pyspark,
-)
+from featurestore.base.utils.utils import norm_content_category_by_pyspark
 from featurestore.constants import DataName
 
 
@@ -61,70 +58,54 @@ class ContentFeaturePreprocessing(BaseDailyFeaturePreprocessing):
 
     def initialize_dataframe(self):
         df = self.create_item_key(self.raw_data[DataName.CONTENT_INFO])
-        if self.process_lib in ["pandas"]:
-            df = df.sort_values(by=["modifydate", "filename_date"], ascending=False)
-            df = df.drop_duplicates(subset=["item_id"]).reset_index(drop=True)
-        else:
-            df = (
-                df.withColumn(
-                    "create_date", F.date_format("create_date", "yyyy-MM-dd HH:mm:ss")
-                )
-                .withColumn(
-                    "modifydate", F.date_format("modifydate", "yyyy-MM-dd HH:mm:ss")
-                )
-                .withColumn(
-                    "publish_date", F.date_format("publish_date", "yyyy-MM-dd HH:mm:ss")
-                )
+        df = (
+            df.withColumn(
+                "create_date", F.date_format("create_date", "yyyy-MM-dd HH:mm:ss")
             )
-            df = (
-                df.withColumn(
-                    "row_number",
-                    F.row_number().over(
-                        Window.partitionBy("item_id").orderBy(
-                            F.col("modifydate").desc(),
-                            F.col("filename_date").desc(),
-                        )
-                    ),
-                )
-                .filter(F.col("row_number") == 1)
-                .drop("row_number")
+            .withColumn(
+                "modifydate", F.date_format("modifydate", "yyyy-MM-dd HH:mm:ss")
             )
+            .withColumn(
+                "publish_date", F.date_format("publish_date", "yyyy-MM-dd HH:mm:ss")
+            )
+        )
+        df = (
+            df.withColumn(
+                "row_number",
+                F.row_number().over(
+                    Window.partitionBy("item_id").orderBy(
+                        F.col("modifydate").desc(),
+                        F.col("filename_date").desc(),
+                    )
+                ),
+            )
+            .filter(F.col("row_number") == 1)
+            .drop("row_number")
+        )
         df = self._norm_some_content_cols(df)
         return df
 
     def _norm_some_content_cols(self, df):
-        if self.process_lib in ["pandas"]:
-            df.create_date = (
-                df.create_date.dt.strftime("%Y%m")
-                .fillna("200001")
-                .astype(int)
-                .astype(str)
-            )
-            if "content_category" in df.columns:
-                df["content_category"] = df["content_category"].fillna("unknown")
-            if "create_date" in df.columns:
-                df["create_date"] = df["create_date"].fillna("unknown")
-        else:
-            df = df.withColumn(
-                "create_date",
-                F.date_format(F.col("create_date"), "yyyyMM")
-                .cast(IntegerType())
-                .cast(StringType()),
-            )
-            df = df.na.fill({"create_date": "200001"})
+        df = df.withColumn(
+            "create_date",
+            F.date_format(F.col("create_date"), "yyyyMM")
+            .cast(IntegerType())
+            .cast(StringType()),
+        )
+        df = df.na.fill({"create_date": "200001"})
 
-            if "content_category" in df.columns:
-                df = df.na.fill(
-                    {
-                        "content_category": "unknown",
-                    }
-                )
-            if "create_date" in df.columns:
-                df = df.na.fill(
-                    {
-                        "create_date": "unknown",
-                    }
-                )
+        if "content_category" in df.columns:
+            df = df.na.fill(
+                {
+                    "content_category": "unknown",
+                }
+            )
+        if "create_date" in df.columns:
+            df = df.na.fill(
+                {
+                    "create_date": "unknown",
+                }
+            )
         return df
 
     def preprocess_content_country(self, df):
@@ -137,115 +118,59 @@ class ContentFeaturePreprocessing(BaseDailyFeaturePreprocessing):
         Returns:
             DataFrame: The dataset with preprocessed and normalized information.
         """
-        if self.process_lib in ["pandas"]:
-            df["clean_content_country"] = (
-                df["content_country"]
-                .fillna("")
-                .map(unidecode)
-                .str.lower()
-                .str.strip()
-                .str.replace(" ", "_")
-            )
-            df["clean_content_country"] = df["clean_content_country"].replace(
-                conf.clean_content_country_mapping
-            )
-            df.loc[
-                df["item_id"].isin(["2#122737"]), "clean_content_country"
-            ] = "viet_nam"
-            df.loc[
-                df["item_id"].isin(conf.nhat_ban_rulebase),
-                "clean_content_country",
-            ] = "nhat_ban"
-            df.loc[
-                df["item_id"].isin(conf.han_quoc_rulebase),
-                "clean_content_country",
-            ] = "han_quoc"
-            df.loc[
-                df["item_id"].isin(conf.tay_ban_nha_rulebase),
-                "clean_content_country",
-            ] = "tay_ban_nha"
-            df.loc[
-                df["item_id"].isin(conf.phap_rulebase),
-                "clean_content_country",
-            ] = "phap"
-            df.loc[
-                df["item_id"].isin(conf.trung_quoc_rulebase),
-                "clean_content_country",
-            ] = "trung_quoc"
+        # Tạo dictionary cho việc mapping country dựa trên item_id
+        country_rules = {"2#122737": "viet_nam", "2#5040": "y", "2#139070": "canada"}
 
-            df.loc[df["item_id"].isin(["2#5040"]), "clean_content_country"] = "y"
-            df.loc[df["item_id"].isin(["2#139070"]), "clean_content_country"] = "canada"
-            df["clean_content_country"] = df["clean_content_country"].fillna("unknown")
-        else:
-            df = df.withColumn("clean_content_country", F.col("content_country"))
-            df = df.na.fill({"clean_content_country": ""})
-            df = df.withColumn(
+        # Gộp các danh sách item_id từ các rulebase
+        country_mapping = {
+            "nhat_ban": conf.nhat_ban_rulebase,
+            "han_quoc": conf.han_quoc_rulebase,
+            "tay_ban_nha": conf.tay_ban_nha_rulebase,
+            "phap": conf.phap_rulebase,
+            "trung_quoc": conf.trung_quoc_rulebase,
+        }
+
+        # Tạo danh sách các điều kiện cho WHEN
+        when_conditions = []
+
+        # Thêm các điều kiện từ country_rules
+        for item_id, country in country_rules.items():
+            when_conditions.append((F.col("item_id") == item_id, F.lit(country)))
+
+        # Thêm các điều kiện từ country_mapping
+        for country, item_list in country_mapping.items():
+            when_conditions.append((F.col("item_id").isin(item_list), F.lit(country)))
+
+        df = (
+            df.withColumn("clean_content_country", F.col("content_country"))
+            .na.fill({"clean_content_country": ""})
+            .withColumn(
                 "clean_content_country",
                 F.udf(unidecode, StringType())(F.col("clean_content_country")),
             )
-            df = df.withColumn(
+            .withColumn(
                 "clean_content_country",
                 F.regexp_replace(
                     F.trim(F.lower(F.col("clean_content_country"))), " ", "_"
                 ),
             )
-            df = df.replace(
+            .replace(
                 conf.clean_content_country_mapping, subset=["clean_content_country"]
             )
-            df = df.withColumn(
+            .withColumn(
                 "clean_content_country",
-                F.when(
-                    F.col("item_id").isin(["2#122737"]), F.lit("viet_nam")
-                ).otherwise(F.col("clean_content_country")),
+                F.when(when_conditions[0][0], when_conditions[0][1])
+                .when(when_conditions[1][0], when_conditions[1][1])
+                .when(when_conditions[2][0], when_conditions[2][1])
+                .when(when_conditions[3][0], when_conditions[3][1])
+                .when(when_conditions[4][0], when_conditions[4][1])
+                .when(when_conditions[5][0], when_conditions[5][1])
+                .when(when_conditions[6][0], when_conditions[6][1])
+                .otherwise(F.col("clean_content_country")),
             )
-            df = df.withColumn(
-                "clean_content_country",
-                F.when(
-                    F.col("item_id").isin(conf.nhat_ban_rulebase), F.lit("nhat_ban")
-                ).otherwise(F.col("clean_content_country")),
-            )
-            df = df.withColumn(
-                "clean_content_country",
-                F.when(
-                    F.col("item_id").isin(conf.han_quoc_rulebase), F.lit("han_quoc")
-                ).otherwise(F.col("clean_content_country")),
-            )
-            df = df.withColumn(
-                "clean_content_country",
-                F.when(
-                    F.col("item_id").isin(conf.tay_ban_nha_rulebase),
-                    F.lit("tay_ban_nha"),
-                ).otherwise(F.col("clean_content_country")),
-            )
-            df = df.withColumn(
-                "clean_content_country",
-                F.when(
-                    F.col("item_id").isin(conf.phap_rulebase), F.lit("phap")
-                ).otherwise(F.col("clean_content_country")),
-            )
-            df = df.withColumn(
-                "clean_content_country",
-                F.when(
-                    F.col("item_id").isin(conf.trung_quoc_rulebase), F.lit("trung_quoc")
-                ).otherwise(F.col("clean_content_country")),
-            )
-            df = df.withColumn(
-                "clean_content_country",
-                F.when(F.col("item_id").isin(["2#5040"]), F.lit("y")).otherwise(
-                    F.col("clean_content_country")
-                ),
-            )
-            df = df.withColumn(
-                "clean_content_country",
-                F.when(F.col("item_id").isin(["2#139070"]), F.lit("canada")).otherwise(
-                    F.col("clean_content_country")
-                ),
-            )
-            df = df.na.fill(
-                {
-                    "clean_content_country": "unknown",
-                }
-            )
+            .na.fill({"clean_content_country": "unknown"})
+        )
+
         return df
 
     def preprocess_content_category(self, df):
@@ -258,20 +183,13 @@ class ContentFeaturePreprocessing(BaseDailyFeaturePreprocessing):
         Returns:
             DataFrame: The dataset with preprocessed and normalized information.
         """
-        if self.process_lib in ["pandas"]:
-            df["clean_content_category"] = df["content_category"].map(
-                norm_content_category
-            )
-            df["clean_content_category"] = df["clean_content_category"].fillna(
-                "unknown"
-            )
-        else:
-            df = norm_content_category_by_pyspark(df)
-            df = df.na.fill(
-                {
-                    "clean_content_category": "unknown",
-                }
-            )
+
+        df = norm_content_category_by_pyspark(df)
+        df = df.na.fill(
+            {
+                "clean_content_category": "unknown",
+            }
+        )
         return df
 
     def preprocess_content_parent_type(self, df):
@@ -284,30 +202,20 @@ class ContentFeaturePreprocessing(BaseDailyFeaturePreprocessing):
         Returns:
             DataFrame: The dataset with preprocessed and normalized information.
         """
-        if self.process_lib in ["pandas"]:
-            content_type_df = self.raw_data[DataName.CONTENT_TYPE].rename(
-                columns={"mapping": "content_parent_type"}
-            )
-            df = df.merge(content_type_df, on="content_type", how="left")
-            df.loc[
-                (df["content_single"] == 2) & (df["content_parent_type"] == "movie"),
-                "content_parent_type",
-            ] = "tv_series"
-            df["content_parent_type"] = df["content_parent_type"].fillna("unknown")
-        else:
-            content_type_df = self.raw_data[DataName.CONTENT_TYPE].withColumnRenamed(
-                "mapping", "content_parent_type"
-            )
-            df = df.join(content_type_df, on="content_type", how="left")
-            df = df.withColumn(
-                "content_parent_type",
-                F.when(
-                    (F.col("content_single") == 2)
-                    & (F.col("content_parent_type") == "movie"),
-                    F.lit("tv_series"),
-                ).otherwise(F.col("content_parent_type")),
-            )
-            df = df.na.fill({"content_parent_type": "unknown"})
+
+        content_type_df = self.raw_data[DataName.CONTENT_TYPE].withColumnRenamed(
+            "mapping", "content_parent_type"
+        )
+        df = df.join(content_type_df, on="content_type", how="left")
+        df = df.withColumn(
+            "content_parent_type",
+            F.when(
+                (F.col("content_single") == 2)
+                & (F.col("content_parent_type") == "movie"),
+                F.lit("tv_series"),
+            ).otherwise(F.col("content_parent_type")),
+        )
+        df = df.na.fill({"content_parent_type": "unknown"})
         return df
 
     def preprocess_is_content_type(self, df):
@@ -320,43 +228,30 @@ class ContentFeaturePreprocessing(BaseDailyFeaturePreprocessing):
         Returns:
             DataFrame: The dataset with preprocessed and normalized information.
         """
-        if self.process_lib in ["pandas"]:
-            df["is_channel_content"] = False
-            df.loc[
-                df["content_parent_type"].isin(["live", "tvod", "sport"]),
-                "is_channel_content",
-            ] = True
 
-            df["is_vod_content"] = True
-            df.loc[
-                (df["content_parent_type"].isin(["movie", "tv_series"]))
-                | (df["is_channel_content"]),
-                "is_vod_content",
-            ] = False
+        channel_content_types = ["live", "tvod", "sport"]
+        movie_content_types = ["movie", "tv_series"]
 
-            df["is_movie_content"] = ~(df["is_vod_content"] | df["is_channel_content"])
-        else:
-            df = df.withColumn("is_channel_content", F.lit(False))
-            df = df.withColumn(
+        df = (
+            df.withColumn(
                 "is_channel_content",
                 F.when(
-                    F.col("content_parent_type").isin(["live", "tvod", "sport"]),
-                    F.lit(True),
-                ).otherwise(F.col("is_channel_content")),
+                    F.col("content_parent_type").isin(channel_content_types), True
+                ).otherwise(False),
             )
-            df = df.withColumn("is_vod_content", F.lit(True))
-            df = df.withColumn(
+            .withColumn(
                 "is_vod_content",
                 F.when(
-                    F.col("content_parent_type").isin(["movie", "tv_series"])
+                    (F.col("content_parent_type").isin(movie_content_types))
                     | F.col("is_channel_content"),
-                    F.lit(False),
-                ).otherwise(F.col("is_vod_content")),
+                    False,
+                ).otherwise(True),
             )
-            df = df.withColumn(
+            .withColumn(
                 "is_movie_content",
                 ~(F.col("is_vod_content") | F.col("is_channel_content")),
             )
+        )
         return df
 
     def preprocess_hashed_item_id(self, df):
@@ -391,4 +286,7 @@ class ContentFeaturePreprocessing(BaseDailyFeaturePreprocessing):
         df = self.preprocess_content_parent_type(df)
         df = self.preprocess_is_content_type(df)
         df = self.preprocess_hashed_item_id(df)
+        # import numpy as np
+        # item_ids = np.array(df.select("item_id").toPandas()["item_id"].values)
+        # np.save("item_id.npy", item_ids)
         return df

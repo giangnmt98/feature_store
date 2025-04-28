@@ -1,13 +1,13 @@
 feature_tables:
   - feature_table_names: [user_features]
     setting_name: user_feature_setting
-    key_names: [user_id]
+    key_names: [profile_id]
     feature_names:
       - encoded_user_province
       - encoded_age_group
-      - encoded_user_package_code
-      - hashed_user_id
-      - hashed_user_id_v2
+#      - encoded_user_package_code
+      - hashed_profile_id
+      - hashed_profile_id_v2
       - encoded_prefer_movie_type
       - encoded_prefer_vod_type
 

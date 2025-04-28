@@ -11,9 +11,6 @@ spark_config:
     feathr_runtime_location: "./vnpt_feathr-0.0.1.jar"
 
 
-
-
-
 online_store:
   redis:
     # Redis configs to access Redis cluster

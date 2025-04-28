@@ -48,52 +48,47 @@ class FeatureTransform:
     def __init__(self):
         # pylint: disable=R0915
         self.key_collection = KeyDefinition().key_collection
-        self.user_id = self.key_collection["user_id"]
+        self.profile_id = self.key_collection["profile_id"]
         self.item_id = self.key_collection["item_id"]
 
         # ANCHORED FEATURE
         # user features
         self.f_age_group = Feature(
             name="user_age_group",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=STRING,
             transform="if(isnull(age_group), 'married', age_group)",
         )
         self.f_province = Feature(
             name="user_province",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=STRING,
             transform="if(isnull(province), 'HCM', province)",
         )
         self.f_package_code = Feature(
             name="user_package_code",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=STRING,
             transform="if(isnull(package_code), 'MYTV021', package_code)",
         )
         self.f_sex = Feature(
             name="user_sex",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=STRING,
             transform="if(isnull(sex), '1', sex)",
         )
-        self.f_platform = Feature(
-            name="user_platform",
-            key=self.user_id,
-            feature_type=STRING,
-            transform="if(isnull(platform), 'b2c-android', platform)",
-        )
-        self.f_hashed_user_id = Feature(
-            name="hashed_user_id",
-            key=self.user_id,
+
+        self.f_hashed_profile_id = Feature(
+            name="hashed_profile_id",
+            key=self.profile_id,
             feature_type=INT64,
-            transform="hashed_user_id",
+            transform="hashed_profile_id",
         )
-        self.f_hashed_user_id_v2 = Feature(
-            name="hashed_user_id_v2",
-            key=self.user_id,
+        self.f_hashed_profile_id_v2 = Feature(
+            name="hashed_profile_id_v2",
+            key=self.profile_id,
             feature_type=INT64,
-            transform="hashed_user_id_v2",
+            transform="hashed_profile_id_v2",
         )
 
         # content features
@@ -188,7 +183,7 @@ class FeatureTransform:
         # online user features
         self.f_prefer_movie_type = Feature(
             name="prefer_movie_type",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=STRING,
             transform=WindowAggTransformation(
                 agg_expr="prefer_movie_type", agg_func="LATEST", window="7d"
@@ -196,7 +191,7 @@ class FeatureTransform:
         )
         self.f_prefer_vod_type = Feature(
             name="prefer_vod_type",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=STRING,
             transform=WindowAggTransformation(
                 agg_expr="prefer_vod_type", agg_func="LATEST", window="7d"
@@ -212,7 +207,7 @@ class FeatureTransform:
         )
         self.f_ab_group_id = Feature(
             name="ab_group_id",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=INT32,
             transform="group_id",
         )
@@ -260,14 +255,14 @@ class FeatureTransform:
         )
         self.f_is_infering_user = DerivedFeature(
             name="is_infering_user",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=BOOLEAN,
             input_features=[self.f_ab_group_id],
             transform="if(boolean(ab_group_id=1), True, False)",
         )
         self.f_user_weight = DerivedFeature(
             name="user_weight",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=FLOAT,
             input_features=[self.f_is_infering_user],
             transform=f"if(boolean(is_infering_user), {INFERRING_USER_WEIGHT}, 1)",
@@ -291,7 +286,7 @@ class FeatureTransform:
         )
         self.f_weighted_lr = DerivedFeature(
             name="weighted_lr",
-            key=[self.user_id, self.item_id],
+            key=[self.profile_id, self.item_id],
             feature_type=FLOAT,
             input_features=[self.f_user_weight, self.f_item_weight],
             transform=f"if(boolean(is_interacted=0), 1, "
@@ -350,35 +345,35 @@ class FeatureTransform:
         )
         self.f_encode_province = DerivedFeature(
             name="encoded_user_province",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=INT32,
             input_features=[self.f_province],
             transform=cond_map_province,
         )
         self.f_encode_package_code = DerivedFeature(
             name="encoded_user_package_code",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=INT32,
             input_features=[self.f_package_code],
             transform=cond_map_package_code,
         )
         self.f_encode_age_group = DerivedFeature(
             name="encoded_age_group",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=INT32,
             input_features=[self.f_age_group],
             transform=cond_map_age_group,
         )
         self.f_encode_prefer_movie_type = DerivedFeature(
             name="encoded_prefer_movie_type",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=INT32,
             input_features=[self.f_prefer_movie_type],
             transform=cond_map_prefer_movie_type,
         )
         self.f_encode_prefer_vod_type = DerivedFeature(
             name="encoded_prefer_vod_type",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=INT32,
             input_features=[self.f_prefer_vod_type],
             transform=cond_map_prefer_vod_type,
@@ -399,7 +394,7 @@ class FeatureTransform:
         )
         self.f_random_user_group = DerivedFeature(
             name="random_user_group",
-            key=self.user_id,
+            key=self.profile_id,
             feature_type=INT64,
             input_features=[self.f_is_infering_user],
             transform=f"if(is_infering_user, 0, ({hash_random_user_group_str}+1))",

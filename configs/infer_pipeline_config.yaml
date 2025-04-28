@@ -1,6 +1,6 @@
 feature_tables:
   - feature_table_names: [user_features]
-    key_names: [user_id]
+    key_names: [profile_id]
     feature_names:
       - encoded_user_province
       - encoded_age_group

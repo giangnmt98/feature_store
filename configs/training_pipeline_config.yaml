@@ -3,24 +3,23 @@ feature_queries:
   - feature_names:
       - user_age_group
       - user_province
-      - user_package_code
+#      - user_package_code
       - user_sex
-      - user_platform
+#      - user_platform
       - encoded_user_province
       - encoded_age_group
-      - encoded_user_package_code
+#      - encoded_user_package_code
       - ab_group_id
       - is_infering_user
       - user_weight
       - batch_idx
       - random_user_group
-      - hashed_user_id
-      - hashed_user_id_v2
-    key_names: [user_id]
+      - hashed_profile_id
+      - hashed_profile_id_v2
+    key_names: [profile_id]
   - feature_names:
       - clean_content_country
       - encoded_content_country
-      - content_category
       - clean_content_category
       - hashed_content_category
       - publish_month
@@ -47,18 +46,18 @@ feature_queries:
       - prefer_vod_type
       - encoded_prefer_movie_type
       - encoded_prefer_vod_type
-    key_names: [user_id]
+    key_names: [profile_id]
   - feature_names:
       - weighted_lr
       - is_weekend
-    key_names: [user_id, item_id]
+    key_names: [profile_id, item_id]
 
 spark_execution_config:
   spark.feathr.inputFormat: parquet
   spark.feathr.outputFormat: parquet
   spark.local.dir: ./tmp
-  spark.driver.cores: 80
-  spark.executor.cores: 80
+  spark.driver.cores: 25
+  spark.executor.cores: 25
   spark.task.cpus: 1
   spark.driver.memory: 12G
   spark.executor.memory: 12G
