@@ -172,13 +172,30 @@ class FeaturePipeline:
             - Retrieving features for the training pipeline.
             - Materializing features for online and offline use.
         """
+        import time
+
         logger.info("PREPROCESS FEATURES")
+        start_time = time.time()
         self.preprocess_features()
+        logger.info("PREPROCESS FEATURES TIME: %s", time.time() - start_time)
+        logger.info("=" * 50)
+
         logger.info("REGISTER FEATURES")
         self.register_features()
+        logger.info("REGISTER FEATURES TIME: %s", time.time() - start_time)
+        logger.info("=" * 50)
+
         logger.info("GET TRAINING FEATURES")
         self.get_features_for_training_pipeline()
+        logger.info("GET TRAINING FEATURES TIME: %s", time.time() - start_time)
+        logger.info("=" * 50)
+
         logger.info("MATERIALIZE ONLINE FEATURES")
         self.materialize_online_features()
+        logger.info("MATERIALIZE ONLINE FEATURES TIME: %s", time.time() - start_time)
+        logger.info("=" * 50)
+
         logger.info("MATERIALIZE OFFLINE FEATURES")
         self.materialize_offline_features()
+        logger.info("MATERIALIZE OFFLINE FEATURES TIME: %s", time.time() - start_time)
+        logger.info("=" * 50)
