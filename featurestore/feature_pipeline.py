@@ -177,31 +177,41 @@ class FeaturePipeline:
         logger.info("PREPROCESS FEATURES")
         start_time = time.time()
         self.preprocess_features()
-        logger.info("PREPROCESS FEATURES TIME: %.2f seconds", time.time() - start_time)
+        logger.info(
+            "PREPROCESS FEATURES TIME: {:.2f} seconds".format(time.time() - start_time)
+        )
         logger.info("=" * 80)
 
         logger.info("REGISTER FEATURES")
         self.register_features()
-        logger.info("REGISTER FEATURES TIME: %.2f seconds", time.time() - start_time)
+        logger.info(
+            "REGISTER FEATURES TIME: {:.2f} seconds".format(time.time() - start_time)
+        )
         logger.info("=" * 80)
 
         logger.info("GET TRAINING FEATURES")
         self.get_features_for_training_pipeline()
         logger.info(
-            "GET TRAINING FEATURES TIME: %.2f seconds", time.time() - start_time
+            "GET TRAINING FEATURES TIME: {:.2f} seconds".format(
+                time.time() - start_time
+            )
         )
         logger.info("=" * 80)
 
         logger.info("MATERIALIZE ONLINE FEATURES")
         self.materialize_online_features()
         logger.info(
-            "MATERIALIZE ONLINE FEATURES TIME: %.2f seconds", time.time() - start_time
+            "MATERIALIZE ONLINE FEATURES TIME: {:.2f} seconds".format(
+                time.time() - start_time
+            )
         )
         logger.info("=" * 80)
 
         logger.info("MATERIALIZE OFFLINE FEATURES")
         self.materialize_offline_features()
         logger.info(
-            "MATERIALIZE OFFLINE FEATURES TIME: %.2f seconds", time.time() - start_time
+            "MATERIALIZE OFFLINE FEATURES TIME: {:.2f} seconds".format(
+                time.time() - start_time
+            )
         )
         logger.info("=" * 80)

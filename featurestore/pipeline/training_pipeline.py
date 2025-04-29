@@ -109,14 +109,11 @@ class TrainingPipeline:
         `FeatureQuery` object using the feature names and the corresponding key
         definitions
         """
-        print(self.training_config.feature_queries)
         for feature_query in self.training_config.feature_queries:
             query = FeatureQuery(
                 feature_list=feature_query.feature_names,
                 key=[self.key_collection[i] for i in feature_query.key_names],
             )
-            print(query)
-
             self.feature_query.append(query)
 
     def _get_offline_features(self):
