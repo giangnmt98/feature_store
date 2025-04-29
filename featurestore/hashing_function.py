@@ -59,14 +59,14 @@ class HashingClass(metaclass=SingletonMeta):
 
     def __init__(self, raw_data_path):
         self.data_path = Path(raw_data_path).parent
-        self.rehash_profile_id = np.load(
-            self.data_path / "profile_ids.npy",
-            allow_pickle=True,
-        ).tolist()
-        self.rehash_item_id = np.load(
-            self.data_path / "item_id.npy",
-            allow_pickle=True,
-        ).tolist()
+        # self.rehash_profile_id = np.load(
+        #     self.data_path / "profile_ids.npy",
+        #     allow_pickle=True,
+        # ).tolist()
+        # self.rehash_item_id = np.load(
+        #     self.data_path / "item_id.npy",
+        #     allow_pickle=True,
+        # ).tolist()
 
     def hashing_func(
         self,

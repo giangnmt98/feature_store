@@ -49,7 +49,7 @@ class OnlineItemFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
 
     def preprocess_feature(self, df):
         big_df = (
-            df.filter(F.col("content_type").cast(StringType()) != "31")
+            df.filter(F.col("content_type") != 31)
             .select("profile_id", "item_id", "filename_date")
             .dropDuplicates()
         )
