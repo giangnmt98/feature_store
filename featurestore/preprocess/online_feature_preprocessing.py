@@ -149,12 +149,12 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
             spark_config,
         )
 
-    def preprocess_feature(self, big_df):
+    def preprocess_feature(self, df):
         """
          Processes user-related data using PySpark to compute feature preferences.
 
         Args:
-            big_df: Input PySpark DataFrame containing user
+            df: Input PySpark DataFrame containing user
                 interaction data (profile_id, content_type, filename_date).
 
         Returns:
@@ -164,7 +164,7 @@ class OnlineUserFeaturePreprocessing(BaseOnlineFeaturePreprocessing):
 
         # 1. Tối ưu cast operations bằng cách gom nhóm
         big_df = (
-            big_df.select(
+            df.select(
                 "*",
                 F.col("content_id").cast("int").alias("content_id_int"),
                 F.col("content_type").cast("int").alias("content_type_int"),

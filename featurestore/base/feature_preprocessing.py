@@ -12,7 +12,6 @@ from typing import Any, Dict, List, Optional, Set, Union
 
 import pandas as pd
 import pyspark.sql.functions as F
-from pyspark.sql.types import LongType, StringType
 
 from configs import conf
 from featurestore.base.utils.fileops import load_parquet_data, save_parquet_data
@@ -33,6 +32,7 @@ class BaseFeaturePreprocessing(ABC):
         process_lib="pandas",
         raw_data_path="data/processed/",
         save_filename="",
+        config=None,
         spark_config=None,
     ):
         """
@@ -48,6 +48,7 @@ class BaseFeaturePreprocessing(ABC):
         self.save_data_dir = self.raw_data_dir / "preprocessed_features"
         self.save_filename = save_filename
         self.raw_data: Dict[str, Any] = {}
+        self.config = config
         self.save_path = self.save_data_dir / f"{self.save_filename}.parquet"
         if self.process_lib == "pyspark":
             self.spark = SparkOperations(spark_config).get_spark_session()
@@ -64,36 +65,6 @@ class BaseFeaturePreprocessing(ABC):
         from a specific source, such as a file, database, or any other storage.
         """
         raise NotImplementedError
-
-    def create_user_key(self, df):
-        """
-        Creates and formats a unique user key for each record in the dataset.
-
-        Args:
-            df (DataFrame): The input dataset, which must contain `profile_id`
-                and `username` columns.
-
-        Returns:
-            DataFrame: The dataset with an additional `user_id` column representing
-                a unique user key.
-        """
-        df = df.withColumn("user_id", F.col("profile_id"))
-        df = df.withColumn(
-            "user_id",
-            F.when(F.col("user_id").cast(StringType()) == "-1", "0").otherwise(
-                F.col("user_id")
-            ),
-        )
-        df = df.na.fill({"user_id": "0"})
-        df = df.withColumn("user_id", F.round(F.col("user_id")).cast(LongType()))
-        df = df.withColumn("user_id", F.col("user_id").cast(StringType()))
-        df = df.withColumn("username", F.lower(F.col("username")))
-        df = df.withColumn(
-            "user_id",
-            F.concat(F.col("user_id"), F.lit("#"), F.col("username")),
-        )
-        df = df.filter(F.col("user_id").isNotNull())
-        return df
 
     def create_item_key(self, df):
         """

@@ -286,7 +286,4 @@ class ContentFeaturePreprocessing(BaseDailyFeaturePreprocessing):
         df = self.preprocess_content_parent_type(df)
         df = self.preprocess_is_content_type(df)
         df = self.preprocess_hashed_item_id(df)
-        # import numpy as np
-        # item_ids = np.array(df.select("item_id").toPandas()["item_id"].values)
-        # np.save("item_id.npy", item_ids)
         return df

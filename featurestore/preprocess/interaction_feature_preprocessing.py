@@ -62,9 +62,15 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
             process_lib=self.process_lib,
             spark=self.spark,
         )
+        user_info = load_parquet_data(
+            file_paths=self.save_data_dir / f"{DataName.USER_INFO}.parquet",
+            process_lib=self.process_lib,
+            spark=self.spark,
+        )
         self.raw_data[DataName.MOVIE_HISTORY] = movie_df
         self.raw_data[DataName.VOD_HISTORY] = vod_df
         self.raw_data[DataName.CONTENT_TYPE] = content_type_df
+        self.raw_data[DataName.USER_INFO] = user_info
 
     def initialize_dataframe(self):
         movie_df = (
@@ -72,6 +78,7 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
             .withColumn("is_vod_content", F.lit(False))
             .drop("username")
         )
+
         vod_df = (
             self.raw_data[DataName.VOD_HISTORY]
             .withColumn("is_vod_content", F.lit(True))
@@ -84,10 +91,14 @@ class InteractedFeaturePreprocessing(BaseDailyFeaturePreprocessing):
             ),
         )
         big_df = movie_df.union(vod_df)
+        big_df = big_df.join(
+            self.raw_data[DataName.USER_INFO].select("profile_id"),
+            on="profile_id",
+            how="inner",
+        )
 
         big_df = self.create_item_key(big_df)
 
-        big_df = big_df.drop("username")
         big_df = big_df.withColumn("profile_id", F.col("profile_id").cast("int"))
         big_df = big_df.withColumn("content_id", F.col("content_id").cast("int"))
         big_df = big_df.withColumn("content_type", F.col("content_type").cast("int"))

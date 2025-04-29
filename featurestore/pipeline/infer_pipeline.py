@@ -46,9 +46,9 @@ class InferPipeline:
             config_path, InferPipelineConfig, parse_infer_config
         )
         self.client = feathr_client
-        self.user_id_list = self.user_item_df["user_id"].unique()
+        self.user_id_list = self.user_item_df["profile_id"].unique()
         self.item_id_list = self.user_item_df["item_id"].unique()
-        self.user_key = "user_id"
+        self.user_key = "profile_id"
         self.item_key = "item_id"
 
     def _get_online_features(

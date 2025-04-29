@@ -12,7 +12,6 @@ from typing import Any, List, Optional, Union
 
 import numpy as np
 import pyarrow as pa
-import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 import pyspark.sql.functions as F
 from pyspark.sql import DataFrame

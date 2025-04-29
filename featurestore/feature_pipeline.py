@@ -13,10 +13,7 @@ from featurestore.base.utils.logger import logger
 from featurestore.pipeline.infer_pipeline import InferPipeline
 from featurestore.pipeline.materialize_pipeline import MaterializePipeline
 from featurestore.pipeline.training_pipeline import TrainingPipeline
-from featurestore.preprocess.feature_preprocessing import (
-    ABUserFeaturePreprocessing,
-    UserFeaturePreprocessing,
-)
+from featurestore.preprocess.ab_feature_preprocessing import ABUserFeaturePreprocessing
 from featurestore.preprocess.interaction_feature_preprocessing import (
     InteractedFeaturePreprocessing,
 )
@@ -27,6 +24,7 @@ from featurestore.preprocess.online_feature_preprocessing import (
     OnlineItemFeaturePreprocessing,
     OnlineUserFeaturePreprocessing,
 )
+from featurestore.preprocess.user_feature_preprocessing import UserFeaturePreprocessing
 from featurestore.registry.feature_registry import FeatureRegistry
 
 

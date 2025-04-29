@@ -10,9 +10,8 @@ import hashlib
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import pyspark.sql.functions as F
-from pyspark.sql.types import LongType, StringType
+from pyspark.sql.types import LongType
 
 from featurestore.base.utils.singleton import SingletonMeta
 
@@ -101,23 +100,23 @@ class HashingClass(metaclass=SingletonMeta):
         Returns:
             The dataframe with an added column of hashed values.
         """
-        cond_str = ""
-        cond_fill = -1
+        # cond_str = ""
+        # cond_fill = -1
         before_length = after_length = 0
 
-        if "profile_id" in dependency_col:
-            rehash_id = self.rehash_profile_id
-        elif "item_id" in dependency_col:
-            rehash_id = self.rehash_item_id
-        else:
-            rehash_id = []
+        # if "profile_id" in dependency_col:
+        #     rehash_id = self.rehash_profile_id
+        # elif "item_id" in dependency_col:
+        #     rehash_id = self.rehash_item_id
+        # else:
+        #     rehash_id = []
 
-        if version in [0, 1]:
-            cond_str = "1"
-            cond_fill = hash_bucket_size
-        elif version == 2:
-            cond_str = "0"
-            cond_fill = 0
+        # if version in [0, 1]:
+        #     cond_str = "1"
+        #     cond_fill = hash_bucket_size
+        # elif version == 2:
+        #     cond_str = "0"
+        #     cond_fill = 0
 
         before_length = df.rdd.mapPartitions(
             lambda partition: [sum(1 for _ in partition)]
@@ -139,23 +138,23 @@ class HashingClass(metaclass=SingletonMeta):
             F.conv(F.col("tmp"), 16, 10).cast(LongType()) % hash_bucket_size,
         ).drop("tmp")
 
-        if rehash_id != [] and version != 0:
-            collision_df = (
-                df.sparkSession.createDataFrame(rehash_id, StringType())
-                .withColumnRenamed("value", dependency_col)
-                .drop_duplicates()
-            )
-            collision_df = collision_df.withColumn("cond", F.lit("1"))
-            df = df.join(collision_df, on=dependency_col, how="left").na.fill(
-                {"cond": "0"}
-            )
-
-            df = df.withColumn(
-                output_feature,
-                F.when(F.col("cond") == cond_str, cond_fill).otherwise(
-                    F.col(output_feature)
-                ),
-            ).drop("cond")
+        # if rehash_id != [] and version != 0:
+        #     collision_df = (
+        #         df.sparkSession.createDataFrame(rehash_id, StringType())
+        #         .withColumnRenamed("value", dependency_col)
+        #         .drop_duplicates()
+        #     )
+        #     collision_df = collision_df.withColumn("cond", F.lit("1"))
+        #     df = df.join(collision_df, on=dependency_col, how="left").na.fill(
+        #         {"cond": "0"}
+        #     )
+        #
+        #     df = df.withColumn(
+        #         output_feature,
+        #         F.when(F.col("cond") == cond_str, cond_fill).otherwise(
+        #             F.col(output_feature)
+        #         ),
+        #     ).drop("cond")
         after_length = df.rdd.mapPartitions(
             lambda partition: [sum(1 for _ in partition)]
         ).sum()
