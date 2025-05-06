@@ -215,3 +215,5 @@ class FeaturePipeline:
             )
         )
         logger.info("=" * 80)
+        logger.info("=" * 80)
+        logger.info("TOTAL TIME: {:.2f} seconds".format(time.time() - start_time))

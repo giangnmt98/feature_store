@@ -129,30 +129,26 @@ class ProfileFeaturePreprocessing(BaseFeaturePreprocessing):
                 .drop("row_num")
             )
 
-            # Remove multiple records
-            df = self.remove_multiple_records(df)
+            # Convert username to lowercase and remove duplicates
+            df = df.withColumn("username", F.lower(df["username"]))
+            df = df.dropDuplicates()
+
+            # Remove profiles that have multiple records in the dataset
+            # left_anti join keeps only records where profile_id appears exactly once
+            df.join(
+                df.groupBy("profile_id")
+                .count()
+                .filter("count > 1")
+                .select("profile_id"),
+                on="profile_id",
+                how="left_anti",
+            )
 
             return df
 
         except Exception as e:
             print(f"Profile data processing error: {str(e)}")
             raise
-
-    def remove_multiple_records(self, df: DataFrame) -> DataFrame:
-        """Remove records with multiple username/profile_id"""
-        # Remove multiple username records
-        df = df.join(
-            df.groupBy("username").count().filter("count > 1").select("username"),
-            on="username",
-            how="left_anti",
-        )
-
-        # Remove multiple profile_id records
-        return df.join(
-            df.groupBy("profile_id").count().filter("count > 1").select("profile_id"),
-            on="profile_id",
-            how="left_anti",
-        )
 
     def preprocess_feature(self, df):
         spare_feature_info = conf.DhashSpareFeatureInfo()
